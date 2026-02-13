@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: biobook-bot
+    env: docker
+    plan: free
+    buildCommand: docker build -t biobook-bot .
+    startCommand: ./docker/entrypoint.sh
+    envVars:
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_DEBUG
+        value: true
+      - key: APP_ENV
+        value: production
+      - key: LOG_CHANNEL
+        value: stderr
