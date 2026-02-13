@@ -1,16 +1,6 @@
 <?php
 
 
-use App\Http\Controllers\EventRequestsController;
-
-use App\Http\Controllers\HelpFormatController;
-use App\Http\Controllers\IncomingReportsController;
-use App\Http\Controllers\IssueCategoryController;
-use App\Http\Controllers\MunicipalityController;
-
-use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\ResultReportsController;
-
 use App\Http\Controllers\UserController;
 
 use App\Models\User;
