@@ -1,15 +1,30 @@
+databases:
+  - name: biobook-db
+    databaseName: biobook_bot
+    user: biobook_user
+    plan: free
+
 services:
   - type: web
     name: biobook-bot
     env: docker
     plan: free
     region: frankfurt
+    preDeployCommand: "php artisan migrate --force"
     envVars:
       - key: APP_DEBUG
-        value: "false"
+        value: "true"
       - key: APP_ENV
         value: production
       - key: LOG_CHANNEL
         value: stderr
       - key: DB_CONNECTION
         value: pgsql
+      - fromDatabase:
+          name: biobook-db
+          property: connectionString
+        key: DATABASE_URL
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        value: https://biobook-bot.onrender.com
