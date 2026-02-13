@@ -1,0 +1,918 @@
+<?php
+
+namespace App\Classes;
+
+
+use Exception;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Telegram\Bot\Api;
+use Telegram\Bot\FileUpload\InputFile;
+use Telegram\Bot\TelegramClient;
+use Telegram\Bot\TelegramRequest;
+
+
+trait BotBaseMethodsTrait
+{
+
+    public function replyToMessage($chatId, $replyToMessageId, $message, $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "reply_to_message_id" => $replyToMessageId,
+            "text" => $message,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $data = $this->bot->sendMessage($tmp);
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendMessage");
+        }
+        return $this;
+    }
+
+    public function sendMessage($chatId, $message, $messageThreadId = null, $delay = 0)
+    {
+        if (mb_strlen($message ?? '') == 0)
+            return $this;
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "text" => $message,
+            "parse_mode" => "HTML"
+        ];
+
+        if (!is_null($messageThreadId))
+            $tmp["message_thread_id"] = $messageThreadId;
+
+        return $this->extractedMessage($message, $tmp, $chatId, $messageThreadId, $delay);
+    }
+
+    public function sendSticker($chatId, $sticker, $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "sticker" => $sticker,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $data = $this->bot->sendSticker($tmp);
+
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendSticker");
+
+        }
+        return $this;
+    }
+
+    public function sendLocation($chatId, $lat, $lon)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "latitude" => $lat,
+            "longitude" => $lon,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $this->bot->sendLocation($tmp);
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendLocation");
+        }
+        return $this;
+
+    }
+
+    public function sendVenue($chatId, $lat, $lon, $address, $title)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "latitude" => $lat,
+            "longitude" => $lon,
+            "title" => $title,
+            "address" => $address,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $this->bot->sendVenue($tmp);
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendVenue");
+        }
+        return $this;
+
+    }
+
+    public function sendContact($chatId, $phoneNumber, $firstName, $lastName = null, $vcard = null)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "phone_number" => $phoneNumber,
+            "first_name" => $firstName,
+            "last_name" => $lastName,
+            "vcard" => $vcard,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $this->bot->sendContact($tmp);
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendContact");
+        }
+        return $this;
+
+    }
+
+
+    public function forwardMessage($chatId, $fromChatId, $messageId)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "from_chat_id" => $fromChatId,
+            "message_id" => $messageId,
+        ];
+
+        try {
+            $this->bot->forwardMessage($tmp);
+        } catch (Exception $e) {
+
+        }
+        return $this;
+    }
+
+    public function sendDice($chatId, $type = 0)
+    {
+        $emojis = ["🎲", "🎯", "🏀", "⚽", "🎳", "🎰"];
+
+        $type = $type >= count($emojis) || $type < 0 ? 0 : $type;
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "emoji" => $emojis[$type],
+            "parse_mode" => "HTML"
+        ];
+
+
+        try {
+            $data = $this->bot->sendDice($tmp);
+        } catch (Exception $e) {
+        }
+        return $this;
+
+    }
+
+    public function sendDocumentWithKeyboard($chatId, $caption, $fileId, $keyboard = [], $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "document" => $fileId,
+            "caption" => $caption,
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        try {
+            $this->bot->sendDocument($tmp);
+        } catch (Exception $e) {
+
+        }
+
+        return $this;
+
+    }
+
+
+    public function sendAudio($chatId, $caption, $fileId, $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "audio" => $fileId,
+            "caption" => $caption,
+            "parse_mode" => "HTML"
+        ];
+
+        try {
+            $this->bot->sendAudio($tmp);
+        } catch (Exception $e) {
+
+        }
+        return $this;
+
+    }
+
+
+    public function sendDocument($chatId, $caption, $fileId, $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "document" => $fileId,
+            "caption" => $caption,
+            "parse_mode" => "HTML"
+        ];
+
+
+        try {
+            $this->bot->sendDocument($tmp);
+        } catch (Exception $e) {
+
+            $this->sendMessageOnCrash($tmp, "sendDocument");
+
+        }
+        return $this;
+
+    }
+
+    public function sendReplyKeyboard($chatId, $message, $keyboard, $messageThreadId = null, $settings = null)
+    {
+
+        $settings = (array)$settings;
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "text" => $message,
+            "parse_mode" => "HTML",
+            'reply_markup' => !is_null($keyboard) && !empty($keyboard) ? json_encode([
+                'keyboard' => $keyboard,
+                'resize_keyboard' => $settings["resize_keyboard"] ?? true,
+                'is_persistent' => $settings["is_persistent"] ?? false,
+                'one_time_keyboard' => $settings["one_time_keyboard"] ?? false,
+                'input_field_placeholder' => $settings["input_field_placeholder"] ?? "Выбор действия"
+            ]) : json_encode([
+                'remove_keyboard' => true,
+            ])
+        ];
+
+        return $this->extractedMessage($message, $tmp, $chatId, $messageThreadId);
+
+    }
+
+    protected function sendMessageOnCrash($tmp, $func)
+    {
+        unset($tmp['reply_markup']);
+        unset($tmp['message_thread_id']);
+
+        if (is_null($tmp["chat_id"]))
+            return;
+
+        if (isset($tmp["message"])) {
+            if (is_null($tmp["message"] ?? null))
+                return;
+        }
+
+        $tmp["message"] = mb_strlen($tmp["message"] ?? '') > 0 ? $tmp["message"] : "Главное меню";
+
+        if (isset($tmp["photo"])) {
+            $fileId = null;
+            try {
+                if (!is_null($tmp["photo"] ?? null) && !($tmp["photo"] instanceof InputFile))
+                    Log::info("image=>".$tmp["photo"]);
+                   // $fileId = FileId::fromBotAPI($tmp["photo"]);
+            } catch (Exception $e) {
+
+            }
+
+
+            $tmp["photo"] = !is_null($fileId) ? $tmp["photo"] :
+                InputFile::create(public_path() . "/images/cashman.jpg");
+        }
+
+        try {
+            $this->bot->{$func}($tmp);
+        } catch (Exception $e) {
+
+            Log::error("[if error in sending]$func=>" . $e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+
+
+             if (preg_match('/Forbidden/i',  $e->getMessage())) {
+                 Log::error("Forbidden: ".$tmp["chat_id"]);
+                 return;
+             }
+
+            if (preg_match('/Unauthorized/i',  $e->getMessage())) {
+                Log::error("Unauthorized: ".$tmp["chat_id"]);
+                return;
+            }
+
+            if (preg_match('/chat not found/i',  $e->getMessage())) {
+                Log::error("Chat not found: ".$tmp["chat_id"]);
+                return;
+            }
+
+            if (preg_match('/Too Many Requests: retry after/i',  $e->getMessage())) {
+                Log::error("Too Many Requests: ".$tmp["chat_id"]);
+                return;
+            }
+
+            if (preg_match('/Bad Request: chat_id is empty/i',  $e->getMessage())) {
+                Log::error("Bad Request: chat_id is empty");
+                return;
+            }
+
+
+        }
+
+        if (property_exists($this, 'currentUpdateId') && $this->currentUpdateId) {
+            Cache::put("tg_message_sent_{$this->currentUpdateId}", true, now()->addMinutes(1));
+        }
+    }
+
+    public function createInvoiceLink($chatId, $title, $description, $prices, $payload, $providerToken, $currency, $needs, $providerData = null)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "title" => $title,
+            "description" => $description,
+            "payload" => $payload,
+            "provider_token" => $providerToken ?? env("PAYMENT_PROVIDER_TOKEN"),
+            "provider_data" => $providerData,
+            "currency" => $currency ?? env("PAYMENT_PROVIDER_CURRENCY"),
+            "prices" => $prices,
+            ...$needs,
+
+        ];
+
+
+
+
+        try {
+            $client = Http::post("https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN') . "/createInvoiceLink", $tmp);
+
+
+            return $client->json();
+
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "createInvoiceLink");
+
+            Log::info("Ошибка конфигурации платежной системы:" . $e->getMessage());
+        }
+
+        return null;
+    }
+
+
+    public function sendInvoice($chatId, $title, $description, $prices, $payload, $providerToken, $currency, $needs, $keyboard, $providerData = null)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "title" => $title,
+            "description" => $description,
+            "payload" => $payload,
+            "provider_token" => $providerToken ?? env("PAYMENT_PROVIDER_TOKEN"),
+            "provider_data" => $providerData,
+            "currency" => $currency ?? env("PAYMENT_PROVIDER_CURRENCY"),
+            "prices" => $prices,
+            ...$needs,
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        } else {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => [
+                    [
+                        ["text" => "Оплатить заказ", "pay" => true]
+                    ]
+                ],
+            ]);
+        }
+
+
+        try {
+            $this->bot->sendInvoice($tmp);
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendInvoice");
+        }
+        return $this;
+
+    }
+
+    public function editInlineKeyboard($chatId, $messageId, $keyboard)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_id" => $messageId,
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+
+        try {
+            $this->bot->editMessageReplyMarkup($tmp);
+        } catch (Exception $e) {
+
+        }
+        
+        return $this;
+    }
+
+    public function editMessageMedia($chatId, $messageId, $media, $keyboard = [])
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_id" => $messageId,
+            "media" => json_encode($media),
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        try {
+            $this->bot->editMessageMedia($tmp);
+        } catch (Exception $e) {
+
+        }
+        
+        return $this;
+    }
+
+
+    public function editMessageText($chatId, $messageId, $text, $keyboard = [])
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_id" => $messageId,
+            "text" => $text,
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        try {
+            $this->bot->editMessageText($tmp);
+        } catch (Exception $e) {
+
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+        
+        return $this;
+    }
+
+    public function editMessageCaption($chatId, $messageId, $caption, $keyboard = [])
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_id" => $messageId,
+            "caption" => $caption,
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        try {
+            $this->bot->editMessageCaption($tmp);
+        } catch (Exception $e) {
+
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+        
+        return $this;
+    }
+
+    public function sendInlineKeyboard($chatId, $message, $keyboard, $messageThreadId = null)
+    {
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "text" => $message,
+            "parse_mode" => "HTML"
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        if (mb_strlen($message ?? '') >= 4000) {
+            $subMessage = mb_substr($message, 0, 4000);
+            $elseMessage = mb_substr($message, 4000);
+
+            $tmp["text"] = "$subMessage...";
+
+            $data = $this->bot->sendMessage($tmp);
+
+            return $this->sendMessage($chatId, "...$elseMessage", $messageThreadId);
+
+        }
+
+
+        try {
+            $data = $this->bot->sendMessage($tmp);
+
+        } catch (Exception $e) {
+
+            $this->sendMessageOnCrash($tmp, "sendMessage");
+
+        }
+        return $this;
+    }
+
+
+    public function sendVideoNote($chatId, $videoNotePath, $keyboard = [], $keyboardType = "inline")
+    {
+        $tmpKeyboard = $keyboardType == "reply" ?
+            [
+                'reply_markup' => json_encode([
+                    'keyboard' => $keyboard,
+                    'resize_keyboard' => true,
+                    'input_field_placeholder' => "Выбор действия"
+                ])
+            ] :
+            [
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => $keyboard,
+                ])
+            ];
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "video_note" => $videoNotePath,
+            "parse_mode" => "HTML",
+            ...$tmpKeyboard
+        ];
+
+
+        try {
+            $this->bot->sendVideoNote($tmp);
+        } catch (Exception $e) {
+
+            $this->sendMessageOnCrash($tmp, "sendVideoNote");
+
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+
+        return $this;
+
+    }
+
+
+    public function sendChatAction($chatId, $action, $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "action" => $action,
+
+        ];
+
+        try {
+            $data = $this->bot->sendChatAction($tmp);
+
+        } catch (Exception $e) {
+
+            $this->sendMessageOnCrash($tmp, "sendChatAction");
+
+        }
+        return $this;
+
+    }
+
+    public function sendPhoto($chatId, $caption, $path, array $keyboard = [], $messageThreadId = null)
+    {
+
+        $photoIsCorrect = $path instanceof InputFile;
+
+        try {
+            if (!$photoIsCorrect) {
+               // $fileId = FileId::fromBotAPI($path);
+                $photoIsCorrect = true;
+            }
+        } catch (Exception $e) {
+
+        }
+
+        if (!$photoIsCorrect) {
+            return empty($keyboard ?? []) ?
+                $this->sendMessage($chatId, $caption ?? 'Ошибочка...', $messageThreadId) :
+                $this->sendInlineKeyboard($chatId, $caption ?? 'Ошибочка...', $keyboard, $messageThreadId);
+        }
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "photo" => $path,
+            "caption" => $caption,
+            "parse_mode" => "HTML",
+        ];
+
+        if (!is_null($messageThreadId))
+            $tmp["message_thread_id"] = $messageThreadId;
+
+        if (count($keyboard ?? []) > 0) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+        if (mb_strlen($caption ?? '') >= 1000) {
+            $subMessage = mb_substr($caption, 0, 1000);
+            $elseMessage = mb_substr($caption, 1000);
+
+            $tmp["caption"] = "$subMessage...";
+
+            
+            $data = $this->bot->sendPhoto($tmp);
+
+            return $this->sendMessage($chatId, "...$elseMessage", $messageThreadId);
+
+        }
+
+        try {
+            $data = $this->bot->sendPhoto($tmp);
+        } catch (Exception $e) {
+            Log::info("error in sendPhoto " . $e->getMessage());
+            empty($keyboard ?? []) ?
+                $this->sendMessage($chatId, $caption ?? 'Ошибочка...', $messageThreadId) :
+                $this->sendInlineKeyboard($chatId, $caption ?? 'Ошибочка...', $keyboard, $messageThreadId);
+        }
+        return $this;
+
+    }
+
+    public function sendVideo($chatId, $caption, $videoPath, $keyboard = [], $messageThreadId = null)
+    {
+        $tmp = [
+            "chat_id" => $chatId,
+            "message_thread_id" => $messageThreadId,
+            "video" => $videoPath,
+            "caption" => $caption,
+            "parse_mode" => "HTML",
+
+        ];
+
+        if (!empty($keyboard ?? [])) {
+            $tmp['reply_markup'] = json_encode([
+                'inline_keyboard' => $keyboard,
+            ]);
+        }
+
+
+        try {
+            $data = $this->bot->sendVideo($tmp);
+
+        } catch (Exception $e) {
+
+            $this->sendMessageOnCrash($tmp, "sendVideo");
+
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+        
+        return $this;
+
+    }
+
+    public function answerPreCheckoutQuery($preCheckoutQueryId, $ok = true, $errorMessage = '')
+    {
+        $tmp = [
+            "pre_checkout_query_id" => $preCheckoutQueryId,
+            "ok" => $ok,
+            "error_message" => $errorMessage,
+        ];
+
+        try {
+            $this->bot->answerPreCheckoutQuery($tmp);
+        } catch (Exception $e) {
+
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+        
+        return $this;
+
+    }
+
+    public function answerShippingQuery($shippingQueryId, $ok = true, $shippingOptions = null, $errorMessage = '')
+    {
+        $tmp = [
+            "shipping_query_id" => $shippingQueryId,
+            "ok" => $ok,
+            "error_message" => $errorMessage,
+        ];
+
+        if (!is_null($shippingOptions))
+            $tmp["shipping_options"] = $shippingOptions;
+
+        try {
+            $this->bot->answerShippingQuery($tmp);
+        } catch (Exception $e) {
+        }
+        return $this;
+
+    }
+
+    public function sendMediaGroup($chatId, $media, $thread = null)
+    {
+        if (count(json_decode($media))>10){
+            $media = json_encode(array_slice(json_decode($media), 0, 10));
+        }
+
+        $tmp = [
+            "chat_id" => $chatId,
+            "media" => $media,
+        ];
+
+
+
+        if (!is_null($thread))
+            $tmp["message_thread_id"] = $thread;
+
+        try {
+            $this->bot->sendMediaGroup($tmp);
+        } catch (Exception $e) {
+            Log::error($e);
+        }
+        return $this;
+
+    }
+
+    public function sendAnswerInlineQuery($inlineQueryId, $results = [], $nextOffset = null, $button = null)
+    {
+
+        try {
+            $this->bot->answerInlineQuery([
+                'cache_time' => 300,
+                'is_personal' => true,
+                'next_offset' => $nextOffset,
+                "inline_query_id" => $inlineQueryId,
+                "results" => json_encode($results),
+                "button" => $button,
+            ]);
+        } catch (Exception $e) {
+            Log::error($e->getMessage() . " " .
+                $e->getFile() . " " .
+                $e->getLine());
+        }
+        
+        return $this;
+
+    }
+
+
+    public function answerCallbackQuery($callbackQueryId, $text = null, $showAlert = false)
+    {
+        $tmp = [
+            "callback_query_id" => $callbackQueryId,
+            "text" => $text,
+            "show_alert" => $showAlert,
+        ];
+
+        try {
+            $this->bot->answerCallbackQuery($tmp);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+        }
+        return $this;
+    }
+
+
+    /**
+     * @param $message
+     * @param array $tmp
+     * @param $chatId
+     * @param mixed $messageThreadId
+     * @return $this|BotManager|BotMethods
+     */
+    private function extractedMessage($message, array $tmp, $chatId, mixed $messageThreadId = null, $delay = 0): BotBaseMethodsTrait|BotMethods|BotManager
+    {
+        if (mb_strlen($message ?? '') >= 4000) {
+            $subMessage = mb_substr($message, 0, 4000);
+            $elseMessage = mb_substr($message, 4000);
+
+            $tmp["text"] = "$subMessage...";
+
+            
+
+
+            try {
+                $data = $this->bot->sendMessage($tmp);
+            } catch (Exception $e) {
+                $this->sendMessageOnCrash($tmp, "sendMessage");
+                return $this;
+
+            }
+
+            return $this->sendMessage($chatId, "...$elseMessage", $messageThreadId, $delay + 2);
+
+        }
+
+
+        try {
+            $data = $this->bot->sendMessage($tmp);
+            if (property_exists($this, 'currentUpdateId') && $this->currentUpdateId) {
+                Cache::put("tg_message_sent_{$this->currentUpdateId}", true, now()->addMinutes(1));
+            }
+        } catch (Exception $e) {
+            $this->sendMessageOnCrash($tmp, "sendMessage");
+        }
+        return $this;
+    }
+    public function setMyCommands($commands)
+    {
+        try {
+            $this->bot->setMyCommands([
+                'commands' => json_encode($commands)
+            ]);
+        } catch (Exception $e) {
+            Log::error("setMyCommands error: " . $e->getMessage());
+        }
+        return $this;
+    }
+
+    public function setMyDescription($description, $languageCode = null)
+    {
+        try {
+            $this->bot->post('setMyDescription', [
+                'description' => $description,
+                'language_code' => $languageCode
+            ]);
+        } catch (Exception $e) {
+            Log::error("setMyDescription error: " . $e->getMessage());
+        }
+        return $this;
+    }
+
+    public function setMyShortDescription($shortDescription, $languageCode = null)
+    {
+        try {
+            $this->bot->post('setMyShortDescription', [
+                'short_description' => $shortDescription,
+                'language_code' => $languageCode
+            ]);
+        } catch (Exception $e) {
+            Log::error("setMyShortDescription error: " . $e->getMessage());
+        }
+        return $this;
+    }
+
+    public function setChatMenuButton($menuButton = null)
+    {
+        try {
+            $params = [];
+            if ($menuButton) {
+                $params['menu_button'] = json_encode($menuButton);
+            }
+            $this->bot->post('setChatMenuButton', $params);
+        } catch (Exception $e) {
+            Log::error("setChatMenuButton error: " . $e->getMessage());
+        }
+        return $this;
+    }
+}

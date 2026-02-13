@@ -1,0 +1,84 @@
+created:
+    - app/Http/Controllers/MunicipalityController.php
+    - app/Http/Controllers/IssueCategoryController.php
+    - app/Http/Controllers/HelpFormatController.php
+    - app/Http/Controllers/ReportController.php
+    - app/Http/Controllers/IncomingReportController.php
+    - app/Http/Controllers/ResultReportController.php
+    - app/Http/Controllers/EventRequestController.php
+    - database/factories/MunicipalityFactory.php
+    - database/factories/IssueCategoryFactory.php
+    - database/factories/HelpFormatFactory.php
+    - database/factories/ReportFactory.php
+    - database/factories/IncomingReportFactory.php
+    - database/factories/ResultReportFactory.php
+    - database/factories/EventRequestFactory.php
+    - database/migrations/2026_01_13_153507_create_municipalities_table.php
+    - database/migrations/2026_01_13_153508_create_issue_categories_table.php
+    - database/migrations/2026_01_13_153509_create_help_formats_table.php
+    - database/migrations/2026_01_13_153510_create_reports_table.php
+    - database/migrations/2026_01_13_153511_create_incoming_reports_table.php
+    - database/migrations/2026_01_13_153512_create_result_reports_table.php
+    - database/migrations/2026_01_13_153513_create_event_requests_table.php
+    - app/Models/Municipality.php
+    - app/Models/IssueCategory.php
+    - app/Models/HelpFormat.php
+    - app/Models/Report.php
+    - app/Models/IncomingReport.php
+    - app/Models/ResultReport.php
+    - app/Models/EventRequest.php
+    - database/seeders/MunicipalitySeeder.php
+    - database/seeders/IssueCategorySeeder.php
+    - database/seeders/HelpFormatSeeder.php
+    - tests/Feature/Http/Controllers/MunicipalityControllerTest.php
+    - tests/Feature/Http/Controllers/IssueCategoryControllerTest.php
+    - tests/Feature/Http/Controllers/HelpFormatControllerTest.php
+    - tests/Feature/Http/Controllers/ReportControllerTest.php
+    - tests/Feature/Http/Controllers/IncomingReportControllerTest.php
+    - tests/Feature/Http/Controllers/ResultReportControllerTest.php
+    - tests/Feature/Http/Controllers/EventRequestControllerTest.php
+    - app/Http/Requests/MunicipalityStoreRequest.php
+    - app/Http/Requests/MunicipalityUpdateRequest.php
+    - app/Http/Requests/IssueCategoryStoreRequest.php
+    - app/Http/Requests/IssueCategoryUpdateRequest.php
+    - app/Http/Requests/HelpFormatStoreRequest.php
+    - app/Http/Requests/HelpFormatUpdateRequest.php
+    - app/Http/Requests/ReportStoreRequest.php
+    - app/Http/Requests/ReportUpdateRequest.php
+    - app/Http/Requests/IncomingReportStoreRequest.php
+    - app/Http/Requests/IncomingReportUpdateRequest.php
+    - app/Http/Requests/ResultReportStoreRequest.php
+    - app/Http/Requests/ResultReportUpdateRequest.php
+    - app/Http/Requests/EventRequestStoreRequest.php
+    - app/Http/Requests/EventRequestUpdateRequest.php
+    - app/Http/Resources/MunicipalityCollection.php
+    - app/Http/Resources/MunicipalityResource.php
+    - app/Http/Resources/IssueCategoryCollection.php
+    - app/Http/Resources/IssueCategoryResource.php
+    - app/Http/Resources/HelpFormatCollection.php
+    - app/Http/Resources/HelpFormatResource.php
+    - app/Http/Resources/ReportCollection.php
+    - app/Http/Resources/ReportResource.php
+    - app/Http/Resources/IncomingReportCollection.php
+    - app/Http/Resources/IncomingReportResource.php
+    - app/Http/Resources/ResultReportCollection.php
+    - app/Http/Resources/ResultReportResource.php
+    - app/Http/Resources/EventRequestCollection.php
+    - app/Http/Resources/EventRequestResource.php
+updated:
+    - routes/api.php
+models:
+    Supplier: { name: string, address: 'string nullable', phone: string, birthday: 'date nullable', email: 'string nullable', hasMany: Product }
+    ProductCategory: { name: string, description: longtext, hasMany: Product }
+    Product: { name: string, description: text, price: 'decimal:8,2', count: integer, supplier_id: 'id foreign:suppliers', product_category_id: 'id foreign:product_categories', belongsTo: 'Supplier, ProductCategory' }
+    Agent: { user_id: 'id foreign:users', name: string, phone: string, email: string, region: string, percents: 'json nullable', hasMany: DeliveryTask }
+    DeliveryTask: { title: string, description: text, status: 'enum:pending,assigned,completed', due_date: date, agent_id: 'id foreign:agents', product_id: 'id foreign:products', belongsTo: 'Agent, Product' }
+    Customer: { name: string, company_name: string, address: string, phone: string, email: string, hasMany: Sale }
+    Sale: { sale_date: date, quantity: integer, total_price: 'decimal:10,2', product_id: 'id foreign:products', agent_id: 'id foreign:agents', customer_id: 'id foreign:customers', belongsTo: 'Product, Agent, Customer' }
+    Municipality: { name: string, config: 'json nullable' }
+    IssueCategory: { name: string, type: 'tinyint default:0', description: 'string nullable', icon: 'string nullable', variants: 'json nullable' }
+    HelpFormat: { name: string, config: 'json nullable' }
+    Report: { report_type: 'tinyint default:0', from_user_id: "id:users comment:'гражданин' nullable", to_user_id: "id:users comment:'официальное лицо'", municipality_id: 'id:municipalities', received_at: 'date,', documents: 'json nullable', relationships: { belongsTo: Municipality, hasOne: 'User IncomingReport ResultReport EventRequest' } }
+    IncomingReport: { report_id: 'id:reports', received_from: 'string nullable', problem_description: text, help_formats: 'json nullable', comment: 'text nullable', relationships: { belongsTo: Report } }
+    ResultReport: { report_id: 'id:reports', topic: string, description: 'longtext nullable', actions: 'json nullable', result: 'json nullable', difficulties: 'json nullable', relationships: { belongsTo: Report } }
+    EventRequest: { report_id: 'id:reports', event_date: date, description: text, target_audience: string, participants_count: integer, help_formats: 'json nullable', comment: 'text nullable', relationships: { belongsTo: Report } }

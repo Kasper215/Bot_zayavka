@@ -1,0 +1,91 @@
+models:
+  Municipality:
+    name: string
+    config: json nullable
+
+
+  IssueCategory:
+    name: string
+    type: tinyint default:0
+    description: string nullable
+    icon: string nullable
+    variants: json nullable
+
+  HelpFormat:
+    name: string
+    config: json nullable
+
+
+  Report:
+    report_type: tinyint default:0
+    from_user_id: id:users comment:'гражданин' nullable
+    to_user_id: id:users comment:'официальное лицо'
+    municipality_id: id:municipalities
+    received_at: date,
+    documents: json nullable
+    relationships:
+      belongsTo: Municipality
+      hasOne:
+        - User
+        - IncomingReport
+        - ResultReport
+        - EventRequest
+
+  IncomingReport:
+    report_id: id:reports
+    received_from: string nullable
+    problem_description: text
+    help_formats: json nullable
+    comment: text nullable
+    relationships:
+      belongsTo:
+        - Report
+
+
+  ResultReport:
+    report_id: id:reports
+    topic: string
+    description: longtext nullable
+    actions: json nullable
+    result: json nullable
+    difficulties: json nullable
+    relationships:
+      belongsTo: Report
+
+
+  EventRequest:
+    report_id: id:reports
+    event_date: date
+    description: text
+    target_audience: string
+    participants_count: integer
+    help_formats: json nullable
+    comment: text nullable
+    relationships:
+      belongsTo:
+        - Report
+
+
+controllers:
+  Municipality:
+    resource: api
+
+  IssueCategory:
+    resource: api
+
+  HelpFormat:
+    resource: api
+
+  Report:
+    resource: api
+
+  IncomingReport:
+    resource: api
+
+  ResultReport:
+    resource: api
+
+  EventRequest:
+    resource: api
+
+seeders: Municipality, IssueCategory, HelpFormat
