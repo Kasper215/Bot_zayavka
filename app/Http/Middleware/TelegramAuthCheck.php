@@ -61,6 +61,7 @@ class TelegramAuthCheck
             return \response()->json(["error" => "Bot User not found"], 404);
 
         if ($this->validateTGData($tgData)) {
+            /** @var mixed $request */
             $request->botUser = $botUser;
             return $next($request);
         } else {

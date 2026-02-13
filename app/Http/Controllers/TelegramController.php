@@ -45,16 +45,16 @@ class TelegramController extends Controller
 
     public function getSelf(Request $request)
     {
-        if (env("APP_DEBUG")) {
+        /*if (env("APP_DEBUG")) {
             $user = User::query()->first();
             $user->role = RoleEnum::ADMIN->value;
             $user->base_role = RoleEnum::ADMIN->value;
-        } else {
+        } else {*/
             $user = User::query()
                 ->find($request->botUser->id);
             $user->base_role = $user->role;
-            Log::info("ENV DEBUG FALSE" . print_r($user->toArray(), true));
-        }
+            // Log::info("ENV DEBUG FALSE" . print_r($user->toArray(), true));
+        /*}*/
 
 
         return response()->json($user);
