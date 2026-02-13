@@ -20,6 +20,8 @@ services:
         value: stderr
       - key: DB_CONNECTION
         value: pgsql
+      - key: DB_PORT
+        value: "5432"
       - fromDatabase:
           name: biobook-db
           property: connectionString
