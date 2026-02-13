@@ -142,7 +142,7 @@ const clearAllLeads = () => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        <tr v-for="lead in leads.data" :key="lead.id" class="hover:bg-slate-50 transition-colors duration-150 group">
+                        <tr v-for="lead in leads.data" :key="lead.id" @click="startEdit(lead)" class="hover:bg-slate-50 transition-colors duration-150 group cursor-pointer">
                             <td class="px-6 py-5">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-semibold border border-slate-200">
@@ -185,7 +185,7 @@ const clearAllLeads = () => {
                             </td>
                             <td class="px-6 py-5 text-right">
                                 <button 
-                                    @click="startEdit(lead)"
+                                    @click.stop="startEdit(lead)"
                                     class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50 transition-all duration-200"
                                     title="Редактировать"
                                 >
@@ -229,77 +229,134 @@ const clearAllLeads = () => {
         </div>
 
         <!-- Модальное окно -->
-        <div v-if="editingLead" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div @click="editingLead = null" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
+        <div v-if="editingLead" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div @click="editingLead = null" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
             
-            <div class="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl transform transition-all overflow-hidden border border-slate-200">
-                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="relative bg-white rounded-2xl w-full max-w-2xl shadow-2xl transform transition-all my-8 border border-slate-200 flex flex-col max-h-[90vh]">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
                     <div>
-                        <h2 class="text-lg font-bold text-slate-900">Заявка #{{ editingLead.id }}</h2>
-                        <p class="text-xs text-slate-500">
-                            {{ editingLead.client_name || editingLead.user?.name || 'Без имени' }}
-                            <span v-if="editingLead.client_name && editingLead.user?.name && editingLead.client_name !== editingLead.user.name">
-                                ({{ editingLead.user.name }})
+                        <h2 class="text-xl font-bold text-slate-900">Заявка #{{ editingLead.id }}</h2>
+                        <div class="text-sm text-slate-500 mt-1 flex flex-col">
+                            <span>
+                                <span class="font-medium text-slate-700">Клиент:</span> 
+                                {{ editingLead.client_name || editingLead.user?.name || 'Без имени' }}
+                                <span v-if="editingLead.client_name && editingLead.user?.name && editingLead.client_name !== editingLead.user.name">
+                                    ({{ editingLead.user.name }})
+                                </span>
                             </span>
-                            {{ editingLead.user?.username ? ' @' + editingLead.user.username : ' (no tg)' }}
-                        </p>
+                            <a 
+                                v-if="editingLead.user?.username" 
+                                :href="'https://t.me/' + editingLead.user.username" 
+                                target="_blank"
+                                class="text-indigo-600 hover:text-indigo-800 hover:underline w-fit"
+                            >
+                                @{{ editingLead.user.username }}
+                            </a>
+                        </div>
                     </div>
                     <button @click="editingLead = null" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
                 
-                <div class="p-6 space-y-5">
-                    <div v-if="Number(userRole) === 1">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Назначить менеджера</label>
-                        <select 
-                            v-model="form.manager_id" 
-                            class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                        >
-                            <option value="">Не назначен</option>
-                            <option v-for="manager in managers" :key="manager.id" :value="manager.id">
-                                {{ manager.name }}
-                            </option>
-                        </select>
+                <div class="p-6 overflow-y-auto">
+                    <!-- Информация о заявке -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Детали заказа</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="text-xs text-slate-500 mb-0.5">Услуга</div>
+                                    <div class="font-medium text-slate-900">{{ editingLead.service_type }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-500 mb-0.5">Объем / Этап</div>
+                                    <div class="font-medium text-slate-900">{{ editingLead.volume_stage }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-500 mb-0.5">Дата создания</div>
+                                    <div class="font-medium text-slate-900">{{ new Date(editingLead.created_at).toLocaleString('ru-RU') }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Контактные данные</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="text-xs text-slate-500 mb-0.5">Контакты из формы</div>
+                                    <div class="font-medium text-slate-900 break-words whitespace-pre-wrap">{{ editingLead.contacts }}</div>
+                                </div>
+                                <div v-if="editingLead.files">
+                                    <div class="text-xs text-slate-500 mb-0.5">Файлы</div>
+                                    <div class="font-medium text-slate-900 break-all text-sm">{{ editingLead.files }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Статус обработки</label>
-                        <select 
-                            v-model="form.status" 
-                            class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                        >
-                            <option value="new">Новая</option>
-                            <option value="in_progress">В работе</option>
-                            <option value="rejected">Отказ</option>
-                            <option value="completed">Завершена</option>
-                        </select>
-                    </div>
+                    <div class="border-t border-slate-100 my-6"></div>
 
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                            Заметки менеджера
-                            <span class="text-[10px] text-slate-400 font-normal">Видны только в админке</span>
-                        </label>
-                        <textarea 
-                            v-model="form.manager_notes" 
-                            rows="5" 
-                            placeholder="Введите подробности по заявке..."
-                            class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                        ></textarea>
+                    <!-- Форма управления -->
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Управление заявкой</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Статус</label>
+                                <select 
+                                    v-model="form.status" 
+                                    class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
+                                >
+                                    <option value="new">Новая</option>
+                                    <option value="in_progress">В работе</option>
+                                    <option value="rejected">Отказ</option>
+                                    <option value="completed">Завершена</option>
+                                </select>
+                            </div>
+
+                            <div v-if="Number(userRole) === 1">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Менеджер</label>
+                                <select 
+                                    v-model="form.manager_id" 
+                                    class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
+                                >
+                                    <option value="">Не назначен</option>
+                                    <option v-for="manager in managers" :key="manager.id" :value="manager.id">
+                                        {{ manager.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                                Заметки менеджера
+                                <span class="text-[10px] text-slate-400 font-normal bg-slate-100 px-2 py-0.5 rounded-full">Внутренние</span>
+                            </label>
+                            <textarea 
+                                v-model="form.manager_notes" 
+                                rows="5" 
+                                placeholder="Комментарии по работе с клиентом..."
+                                class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 resize-none"
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div class="p-6 bg-slate-50/80 flex justify-end gap-3 border-t border-slate-100">
+                <div class="p-6 bg-slate-50/80 flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
                     <button @click="editingLead = null" class="px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white rounded-xl border border-slate-200 transition-all duration-200">
-                        Отмена
+                        Закрыть
                     </button>
                     <button 
                         @click="saveEdit" 
                         :disabled="form.processing" 
-                        class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all duration-200"
+                        class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all duration-200 flex items-center gap-2"
                     >
-                        {{ form.processing ? 'Сохранение...' : 'Обновить информацию' }}
+                        <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {{ form.processing ? 'Сохранение...' : 'Сохранить изменения' }}
                     </button>
                 </div>
             </div>
