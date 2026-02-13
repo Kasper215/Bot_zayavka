@@ -10,7 +10,7 @@ services:
     env: docker
     plan: free
     region: frankfurt
-    preDeployCommand: "php artisan migrate --force"
+    preDeployCommand: "php artisan config:clear && php artisan migrate --force"
     envVars:
       - key: APP_DEBUG
         value: "true"
@@ -24,8 +24,20 @@ services:
         value: "5432"
       - fromDatabase:
           name: biobook-db
-          property: connectionString
-        key: DATABASE_URL
+          property: host
+        key: DB_HOST
+      - fromDatabase:
+          name: biobook-db
+          property: database
+        key: DB_DATABASE
+      - fromDatabase:
+          name: biobook-db
+          property: user
+        key: DB_USERNAME
+      - fromDatabase:
+          name: biobook-db
+          property: password
+        key: DB_PASSWORD
       - key: APP_KEY
         sync: false
       - key: APP_URL
