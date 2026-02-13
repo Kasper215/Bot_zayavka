@@ -1,0 +1,11 @@
+vendor
+node_modules
+public/storage
+public/build
+.env
+.git
+.phpunit.result.cache
+docker-compose.yml
+Dockerfile
+render.yaml
+.dockerignore
