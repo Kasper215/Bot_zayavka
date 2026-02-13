@@ -54,7 +54,7 @@ class BotManager extends BotCore
                 'email' => "$telegram_chat_id@" . env('APP_EMAIL_DOMAIN'),
                 'name' => $displayName,
                 'username' => $username,
-                'password' => bcrypt($telegram_chat_id),
+                'password' => bcrypt(Str::random(32)),
                 'role' => RoleEnum::USER->value,
                 'telegram_chat_id' => $telegram_chat_id,
                 'fio_from_telegram' => $fullName ?: null,

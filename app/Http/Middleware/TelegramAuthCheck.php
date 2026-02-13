@@ -26,7 +26,7 @@ class TelegramAuthCheck
     {
         $isDebug = env("APP_DEBUG");
 
-        if ($isDebug){
+        /*if ($isDebug){
             $botUser = User::query()
                 ->first();
 
@@ -36,7 +36,7 @@ class TelegramAuthCheck
 
             $request->botUser = $botUser;
             return $next($request);
-        }
+        }*/
 
         $headerTgDataEncrypted = $request->header("X-Tg-Data") ?? null;
         $tgData = $request->tgData ?? null;
