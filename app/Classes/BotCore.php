@@ -45,7 +45,7 @@ abstract class BotCore
     protected abstract function setWebhook();
 
 
-    protected abstract function botStatusHandler(): int;
+    protected abstract function botStatusHandler(): BotStatusEnum;
 
     protected abstract function checkIsUserBlocked(): bool;
 

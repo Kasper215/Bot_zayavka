@@ -88,7 +88,7 @@ class BotManager extends BotCore
         return false;
     }
 
-    protected function botStatusHandler(): int
+    protected function botStatusHandler(): BotStatusEnum
     {
         $isWorking = env("TELEGRAM_BOT_IS_WORKING");
 

@@ -4,6 +4,6 @@ namespace App\Classes;
 
 enum BotStatusEnum:int
 {
-    const Working = 0;
-    const InMaintenance = 1;
+    case Working = 0;
+    case InMaintenance = 1;
 }
