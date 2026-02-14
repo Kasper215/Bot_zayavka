@@ -1,6 +1,6 @@
 databases:
   - name: biobook-db
-    databaseName: biobook_bot
+    databaseName: biobook_db
     user: biobook_user
     plan: free
 
