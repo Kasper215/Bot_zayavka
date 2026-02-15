@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-use PHPUnit\Exception;
+
 use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -338,163 +338,167 @@ abstract class BotCore
         if (is_null($this->bot))
             return;
 
-        $update = $this->bot->getWebhookUpdate();
-        $updateId = $update['update_id'] ?? null;
-        $this->currentUpdateId = $updateId;
-
-        // Защита от повторных запросов Telegram (retries)
-        if ($updateId) {
-            $lockKey = "tg_update_processed_{$updateId}";
-            if (Cache::has($lockKey)) {
-                return;
-            }
-            Cache::put($lockKey, true, now()->addMinutes(5));
-        }
-
-        //Log::info(print_r($update, true));
-
-        include_once base_path('routes/bot.php');
-
-        $item = json_decode($update);
-
-        if (isset($update["channel_post"])) {
-
-            $text = $item->channel_post->text ?? null;
-
-            if (mb_strtolower($text) === "мой id")
-                BotMethods::bot()
-                    ->sendMessage($item->channel_post->sender_chat->id,
-                        "Ваш id=>" . $item->channel_post->sender_chat->id
-                    );
-            return;
-        }
-
-        if (isset($update["inline_query"])) {
-            $this->createUser($item->inline_query->from);
-            $this->inlineHandler($update);
-            
-            return;
-        }
         try {
-            if (isset($update["pre_checkout_query"])) {
-                // $this->preCheckoutQueryHandler($item->pre_checkout_query);
-                return;
-            }
+            $update = $this->bot->getWebhookUpdate();
+            $updateId = $update['update_id'] ?? null;
+            $this->currentUpdateId = $updateId;
 
-            if (isset($update["shipping_query"])) {
-                //  $this->shippingQueryHandler($item->shipping_query);
-                return;
-            }
-        } catch (\Exception $e) {
-            Log::info($e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
-        }
-
-
-        //формируем сообщение из возможных вариантов входных данных
-        $message = $item->message ??
-            $item->edited_message ??
-            $item->callback_query->message ??
-
-            null;
-
-        //если сообщения нет, то завершаем работу
-        if (is_null($message))
-            return;
-
-
-        //разделяем логику получения данных об отправителе,
-        // так как данные приходят в разных частях JSON-объекта,
-        // то создадим условие, по которому будем различать откуда получать эти данные
-
-        if (isset($update["callback_query"]))
-            $this->createUser($item->callback_query->from);
-        else
-            $this->createUser($message->from);
-
-        if ($this->checkIsUserBlocked())
-            return;
-
-        try {
-            if (isset($update["message"]["successful_payment"])) {
-                $this->successfulPaymentHandler($item->message->successful_payment);
-                return;
-            }
-        } catch (\Exception $e) {
-            Log::info($e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
-        }
-
-
-        try {
-
-
-            $query = $item->message->text ??
-                $item->callback_query->data ??
-                $item->edited_message->text ??
-                $item->message->contact->phone_number ?? '';
-
-            if (!is_null($item->message->contact ?? null)) {
-                $botUser = $this->currentBotUser();
-                $botUser->phone = $item->message->contact->phone_number ?? $botUser->phone ?? null;
-                $botUser->save();
-
-            }
-
-
-            $this->chatId = $message->chat->id;
-
-            $botStatus = $this->botStatusHandler();
-
-            if ($botStatus != BotStatusEnum::Working)
-                return;
-
-
-            $coords = !isset($update["message"]["location"]) ? null :
-                (object)[
-                    "latitude" => $update["message"]["location"]["latitude"] ?? 0,
-                    "longitude" => $update["message"]["location"]["longitude"] ?? 0
-                ];
-
-            if ($this->botLocationHandler($coords, $message))
-                return;
-
-
-            if ($this->botRouteHandler($message, $query))
-                return;
-
-            if ($this->botNextHandler($message))
-                return;
-
-            if ($this->botFallbackStickerHandler($message))
-                return;
-
-            if ($this->botFallbackPhotoHandler($message))
-                return;
-
-            if ($this->botFallbackVideoHandler($message))
-                return;
-
-            if ($this->botFallbackAudioHandler($message))
-                return;
-
-            if ($this->botFallbackDocumentHandler($message))
-                return;
-
-            if ($this->botFallbackHandler($message))
-                return;
-
-            if ($this->adminNotificationHandler($message, $query))
-                return;
-
-            if (($update["message"]["chat"]["is_forum"] ?? 0) == 0) {
-                // Проверяем, было ли отправлено хоть одно сообщение в рамках этого запроса
-                $messageSent = Cache::get("tg_message_sent_{$updateId}", false);
-                if (!$messageSent) {
-                    $this->reply("Ошибка обработки данных!");
+            // Защита от повторных запросов Telegram (retries)
+            if ($updateId) {
+                $lockKey = "tg_update_processed_{$updateId}";
+                if (Cache::has($lockKey)) {
+                    return;
                 }
+                Cache::put($lockKey, true, now()->addMinutes(5));
             }
-        } catch (Exception $e) {
-            Log::info("in handler function=>" . $e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
 
+            //Log::info(print_r($update, true));
+
+            include_once base_path('routes/bot.php');
+
+            $item = json_decode($update);
+
+            if (isset($update["channel_post"])) {
+
+                $text = $item->channel_post->text ?? null;
+
+                if (mb_strtolower($text) === "мой id")
+                    BotMethods::bot()
+                        ->sendMessage($item->channel_post->sender_chat->id,
+                            "Ваш id=>" . $item->channel_post->sender_chat->id
+                        );
+                return;
+            }
+
+            if (isset($update["inline_query"])) {
+                $this->createUser($item->inline_query->from);
+                $this->inlineHandler($update);
+                
+                return;
+            }
+            try {
+                if (isset($update["pre_checkout_query"])) {
+                    // $this->preCheckoutQueryHandler($item->pre_checkout_query);
+                    return;
+                }
+
+                if (isset($update["shipping_query"])) {
+                    //  $this->shippingQueryHandler($item->shipping_query);
+                    return;
+                }
+            } catch (\Exception $e) {
+                Log::info($e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
+            }
+
+
+            //формируем сообщение из возможных вариантов входных данных
+            $message = $item->message ??
+                $item->edited_message ??
+                $item->callback_query->message ??
+
+                null;
+
+            //если сообщения нет, то завершаем работу
+            if (is_null($message))
+                return;
+
+
+            //разделяем логику получения данных об отправителе,
+            // так как данные приходят в разных частях JSON-объекта,
+            // то создадим условие, по которому будем различать откуда получать эти данные
+
+            if (isset($update["callback_query"]))
+                $this->createUser($item->callback_query->from);
+            else
+                $this->createUser($message->from);
+
+            if ($this->checkIsUserBlocked())
+                return;
+
+            try {
+                if (isset($update["message"]["successful_payment"])) {
+                    $this->successfulPaymentHandler($item->message->successful_payment);
+                    return;
+                }
+            } catch (\Exception $e) {
+                Log::info($e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
+            }
+
+
+            try {
+
+
+                $query = $item->message->text ??
+                    $item->callback_query->data ??
+                    $item->edited_message->text ??
+                    $item->message->contact->phone_number ?? '';
+
+                if (!is_null($item->message->contact ?? null)) {
+                    $botUser = $this->currentBotUser();
+                    $botUser->phone = $item->message->contact->phone_number ?? $botUser->phone ?? null;
+                    $botUser->save();
+
+                }
+
+
+                $this->chatId = $message->chat->id;
+
+                $botStatus = $this->botStatusHandler();
+
+                if ($botStatus != BotStatusEnum::Working)
+                    return;
+
+
+                $coords = !isset($update["message"]["location"]) ? null :
+                    (object)[
+                        "latitude" => $update["message"]["location"]["latitude"] ?? 0,
+                        "longitude" => $update["message"]["location"]["longitude"] ?? 0
+                    ];
+
+                if ($this->botLocationHandler($coords, $message))
+                    return;
+
+
+                if ($this->botRouteHandler($message, $query))
+                    return;
+
+                if ($this->botNextHandler($message))
+                    return;
+
+                if ($this->botFallbackStickerHandler($message))
+                    return;
+
+                if ($this->botFallbackPhotoHandler($message))
+                    return;
+
+                if ($this->botFallbackVideoHandler($message))
+                    return;
+
+                if ($this->botFallbackAudioHandler($message))
+                    return;
+
+                if ($this->botFallbackDocumentHandler($message))
+                    return;
+
+                if ($this->botFallbackHandler($message))
+                    return;
+
+                if ($this->adminNotificationHandler($message, $query))
+                    return;
+
+                if (($update["message"]["chat"]["is_forum"] ?? 0) == 0) {
+                    // Проверяем, было ли отправлено хоть одно сообщение в рамках этого запроса
+                    $messageSent = Cache::get("tg_message_sent_{$updateId}", false);
+                    if (!$messageSent) {
+                        $this->reply("Ошибка обработки данных!");
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::info("in handler function internal block=>" . $e->getMessage() . " " . $e->getFile() . " " . $e->getLine());
+            }
+
+        } catch (\Throwable $e) {
+            Log::error("Bot Handler Fatal Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
         }
     }
 

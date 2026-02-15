@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use PHPUnit\Exception;
+
 
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Telegram\Bot\Api;
@@ -98,7 +98,7 @@ class BotManager extends BotCore
         $message = 'Техническое обслуживание';
 
         $this
-            ->replyPhoto("\xF0\x9F\x9A\xA8В данный момент сервис временно недосутепн! Обратитесь в тех. поддержку:\xF0\x9F\x9A\xA8\n\n<em><b>$message</b></em>",
+            ->replyPhoto("\xF0\x9F\x9A\xA8В данный момент сервис временно недоступен! Обратитесь в тех. поддержку:\xF0\x9F\x9A\xA8\n\n<em><b>$message</b></em>",
                 InputFile::create(public_path() . "/images/maintenance.png")
             );
 
