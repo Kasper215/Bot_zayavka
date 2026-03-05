@@ -13,7 +13,7 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         //
-
-        '/webhook'
+        '/webhook',
+        '/admin-auth'
     ];
 }

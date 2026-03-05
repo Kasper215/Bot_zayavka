@@ -39,6 +39,44 @@ Route::get('/admin', function(Request $request) {
     return redirect()->route('admin.dashboard');
 })->middleware('auth');
 
+// Авторизация Mini App для админки (получение данных)
+Route::match(['get', 'post'], '/admin-auth', function(Request $request) {
+    if ($request->isMethod('post') && $request->has('initData')) {
+        $queryStr = $request->input('initData');
+        
+        $utilities = new class { use \App\Http\Middleware\Service\Utilities; };
+        
+        if (!$queryStr || !$utilities->validateTGData($queryStr)) {
+            \Illuminate\Support\Facades\Log::error("TG Auth failed. Data: " . $queryStr);
+            return response("Ошибка авторизации или подпись не верна. Откройте приложение через Telegram.", 403);
+        }
+
+        $tgData = [];
+        parse_str($queryStr, $tgData);
+        
+        if(!isset($tgData['user'])) {
+            return response("Нет данных о пользователе Telegram.", 403);
+        }
+
+        $tgUser = json_decode($tgData['user'], true);
+        
+        $user = User::query()->where('telegram_chat_id', $tgUser['id'])->first();
+        
+        if (!$user || $user->role == 0) {
+            return response("У вас нет прав администратора.", 403);
+        }
+        
+        Auth::login($user);
+        
+        // Серверный редирект на дашборд после успешной формы
+        return redirect()->route('admin.dashboard');
+    }
+
+    return view('bot-login');
+});
+
+
+
 Route::get('/', function() {
     return redirect('/admin');
 });

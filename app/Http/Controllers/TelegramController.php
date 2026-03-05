@@ -25,6 +25,8 @@ class TelegramController extends Controller
     const STATE_ORDER_NAME = 'order_name';
     const STATE_ORDER_CONTACTS = 'order_contacts';
     const STATE_ORDER_CALC_PAGES = 'order_calc_pages';
+    const STATE_ORDER_CALC_FORMAT = 'order_calc_format';
+    const STATE_ORDER_CALC_PHOTOS = 'order_calc_photos';
     const STATE_ORDER_CALC_PRINT = 'order_calc_print';
     const STATE_ORDER_CONFIRM = 'order_confirm';
     
@@ -33,7 +35,9 @@ class TelegramController extends Controller
     
     // Калькулятор
     const STATE_CALC_PAGES = 'calc_pages';
+    const STATE_CALC_FORMAT = 'calc_format';
     const STATE_CALC_SOURCE = 'calc_source';
+    const STATE_CALC_PHOTOS = 'calc_photos';
     const STATE_CALC_PRINT = 'calc_print';
 
     // Квиз "Какой жанр подходит"
@@ -231,6 +235,8 @@ class TelegramController extends Controller
             ],
             [
                 ["text" => "📚 Наши услуги и цены"],
+            ],
+            [
                 ["text" => "📂 Портфолио / Примеры"],
             ],
             [
@@ -278,6 +284,33 @@ class TelegramController extends Controller
             ->replyInlineKeyboard($text, $keyboard);
     }
 
+    public function adminMenuCommand()
+    {
+        $botUser = BotManager::bot()->currentBotUser();
+        
+        // Разрешаем только администраторам (роль = 1) и менеджерам (роль = 2)
+        if (!$botUser->isAdmin() && !$botUser->isManager()) {
+            BotManager::bot()->reply("У вас нет доступа к этому меню.");
+            return;
+        }
+
+        $adminUrl = env('APP_URL') . '/admin-auth'; // Ссылка на ваш интерфейс админки (через Inertia/Vue)
+
+        $text = "👨‍💻 <b>Панель администратора</b>\n\nДобро пожаловать в админ-меню. Вы можете управлять заявками, проектами и пользователями прямо с телефона, открыв наше встроенное приложение.";
+
+        $keyboard = [
+            [
+                ["text" => "🚀 Открыть админ-панель (Mini App)", "web_app" => ["url" => $adminUrl]],
+            ],
+            [
+                ["text" => "📊 Статистика (в чат)", "callback_data" => "admin_stats"],
+            ]
+        ];
+
+        BotManager::bot()
+            ->replyInlineKeyboard($text, $keyboard);
+    }
+
     public function handleWizard(...$data)
     {
         $botUser = BotManager::bot()->currentBotUser();
@@ -290,6 +323,33 @@ class TelegramController extends Controller
         $query = $update['message']['text'] ?? 
                  $update['callback_query']['data'] ?? 
                  '';
+
+        if ($query === 'admin_stats' && isset($update['callback_query'])) {
+            if (!$botUser->isAdmin() && !$botUser->isManager()) {
+                BotManager::bot()->reply("У вас нет доступа к этой функции.");
+                return;
+            }
+
+            $totalLeads = \App\Models\Lead::count();
+            $newLeads = \App\Models\Lead::where('status', 'new')->count();
+            $totalUsers = User::count();
+
+            $statsText = "📊 <b>Краткая статистика</b>\n\n" .
+                         "👤 Всего пользователей: <b>{$totalUsers}</b>\n" .
+                         "📝 Всего заявок: <b>{$totalLeads}</b>\n" .
+                         "🔥 Новых заявок (не обработано): <b>{$newLeads}</b>\n\n" .
+                         "<i>Подробности смотрите в Mini App 🚀</i>";
+
+            BotManager::bot()->reply($statsText);
+            
+            // Убираем часики на кнопке инлайн клавиатуры
+            $callbackId = $update['callback_query']['id'];
+            $bot = BotMethods::bot();
+            $bot->answerCallbackQuery([
+                'callback_query_id' => $callbackId
+            ]);
+            return;
+        }
 
         Log::info("Bot Debug: userId={$userId}, state={$state}, query={$query}");
 
@@ -419,8 +479,14 @@ class TelegramController extends Controller
             case self::STATE_ORDER_CALC_PAGES:
                 $this->stepOrderCalcPages($userId, $query);
                 break;
+            case self::STATE_ORDER_CALC_FORMAT:
+                $this->stepOrderCalcFormat($userId, $query);
+                break;
             case self::STATE_ORDER_CALC_PRINT:
                 $this->stepOrderCalcPrint($userId, $query);
+                break;
+            case self::STATE_ORDER_CALC_PHOTOS:
+                $this->stepOrderCalcPhotos($userId, $query);
                 break;
             case self::STATE_ORDER_CONFIRM:
                 $this->step5Confirm($userId, $query);
@@ -429,13 +495,18 @@ class TelegramController extends Controller
             case self::STATE_CALC_PAGES:
                 $this->stepCalcPages($userId, $query);
                 break;
+            case self::STATE_CALC_FORMAT:
+                $this->stepCalcFormat($userId, $query);
+                break;
             case self::STATE_CALC_SOURCE:
                 $this->stepCalcSource($userId, $query);
+                break;
+            case self::STATE_CALC_PHOTOS:
+                $this->stepCalcPhotos($userId, $query);
                 break;
             case self::STATE_CALC_PRINT:
                 $this->stepCalcPrint($userId, $query);
                 break;
-            // Квиз
             case self::STATE_QUIZ_Q1:
                 $this->stepQuizQ1($userId, $query);
                 break;
@@ -768,7 +839,7 @@ class TelegramController extends Controller
 
         Cache::put("bot_user_state_{$userId}", self::STATE_ORDER_CALC_PAGES, now()->addHours(2));
 
-        $text = "Приятно познакомиться! Почти готово. 🏁\n\nДавайте примерно рассчитаем стоимость вашего проекта. Введите примерное <b>количество страниц</b> будущей книги (только число, например: 5) или нажмите «Пропустить»:";
+        $text = "Приятно познакомиться! Почти готово. 🏁\n\nДавайте примерно рассчитаем стоимость вашего проекта. Введите примерное <b>количество страниц</b> будущей книги (минимум 20, кратно 4, например: 20) или нажмите «Пропустить»:";
         $keyboard = [[["text" => "⏭ Пропустить"]]];
         BotManager::bot()->replyKeyboard($text, $keyboard);
     }
@@ -781,46 +852,139 @@ class TelegramController extends Controller
         }
 
         $pages = (int) filter_var($text, FILTER_SANITIZE_NUMBER_INT);
-        if ($pages <= 0) {
-            BotManager::bot()->reply("Пожалуйста, введите корректное количество страниц (только цифры больше нуля) или нажмите «Пропустить».");
+        if ($pages < 20) {
+            BotManager::bot()->reply("⚠️ Минимальный объём книги — <b>20 страниц</b>.\nПожалуйста, введите количество страниц от 20 или нажмите «Пропустить».");
             return;
         }
 
-        // Базовый расчет (как в основном калькуляторе)
-        $basePrice = $pages * 1000;
-        
-        $orderData = Cache::get("bot_user_order_data_{$userId}", []);
-        if (($orderData['volume'] ?? '') === "🆕 Начинаем с нуля") {
-            $basePrice *= 1.3;
+        // Число страниц должно быть кратно 4
+        if ($pages % 4 !== 0) {
+            $rounded = (int)(ceil($pages / 4) * 4);
+            BotManager::bot()->reply("⚠️ Объём книги должен быть кратен 4 страницам. Ближайшее значение: <b>{$rounded}</b>.\n\nВведите количество страниц (кратное 4) или нажмите «Пропустить»:");
+            return;
         }
 
-        $minPrice = number_format($basePrice, 0, '.', ' ');
-        $maxPrice = number_format($basePrice * 1.2, 0, '.', ' ');
+        $orderData = Cache::get("bot_user_order_data_{$userId}", []);
+        $orderData['calc_pages'] = $pages;
+        Cache::put("bot_user_order_data_{$userId}", $orderData, now()->addHours(2));
+        Cache::put("bot_user_state_{$userId}", self::STATE_ORDER_CALC_FORMAT, now()->addHours(2));
 
-        Cache::put("bot_user_calc_results_{$userId}", [
-            'pages' => $pages,
-            'print' => 'Не указано',
-            'source' => $orderData['volume'] ?? 'Пишем с нуля',
-            'range' => "от {$minPrice} до {$maxPrice} ₽"
-        ], now()->addHours(2));
+        $keyboard = [
+            [["text" => "📄 Формат А5 (148×210 мм)"]],
+            [["text" => "📋 Формат А4 (210×297 мм)"]],
+            [["text" => "⏭ Пропустить"]],
+        ];
+        BotManager::bot()->replyKeyboard("📐 Выберите формат книги:", $keyboard);
+    }
 
+    private function stepOrderCalcFormat($userId, $text)
+    {
+        if ($text === "⏭ Пропустить") {
+            $this->stepOrderCalcPrint($userId, "⏭ Пропустить");
+            return;
+        }
+
+        $formats = [
+            "📄 Формат А5 (148×210 мм)" => 'A5',
+            "📋 Формат А4 (210×297 мм)" => 'A4',
+        ];
+
+        $format = $formats[$text] ?? 'A5';
+        $orderData = Cache::get("bot_user_order_data_{$userId}", []);
+        $orderData['calc_format'] = $format;
+        Cache::put("bot_user_order_data_{$userId}", $orderData, now()->addHours(2));
+        Cache::put("bot_user_state_{$userId}", self::STATE_ORDER_CALC_PHOTOS, now()->addHours(2));
+
+        $keyboard = [
+            [["text" => "🚫 Без фото"]],
+            [["text" => "📸 До 20 фото"]],
+            [["text" => "📸 20-40 фото"]],
+            [["text" => "📸 40-60 фото"]],
+            [["text" => "⏭ Пропустить"]],
+        ];
+        BotManager::bot()->replyKeyboard("🖼 Сколько фотографий планируется в книге?\n<i>(Обработка и вставка: 1 000 ₽ за каждые 20 шт.)</i>", $keyboard);
+    }
+
+    private function stepOrderCalcPhotos($userId, $text)
+    {
+        if ($text === "⏭ Пропустить") {
+            $this->stepOrderCalcPrint($userId, "⏭ Пропустить");
+            return;
+        }
+
+        $photos = 0;
+        if ($text === "📸 До 20 фото") $photos = 20;
+        if ($text === "📸 20-40 фото") $photos = 40;
+        if ($text === "📸 40-60 фото") $photos = 60;
+
+        $orderData = Cache::get("bot_user_order_data_{$userId}", []);
+        $orderData['calc_photos'] = $photos;
+        Cache::put("bot_user_order_data_{$userId}", $orderData, now()->addHours(2));
         Cache::put("bot_user_state_{$userId}", self::STATE_ORDER_CALC_PRINT, now()->addHours(2));
 
-        $text = "Нужна ли печать тиража или только электронная версия?";
         $keyboard = [
-            [["text" => "🖨 Печать тиража"]],
-            [["text" => "💻 Только электронная версия"]],
-            [["text" => "⏭ Пропустить"]]
+            [["text" => "💻 Только электронная версия (PDF)"]],
+            [["text" => "⬛ Печать ч/б + электронная версия"]],
+            [["text" => "🎨 Цветная печать + электронная версия"]],
+            [["text" => "⏭ Пропустить"]],
         ];
-        BotManager::bot()->replyKeyboard($text, $keyboard);
+        BotManager::bot()->replyKeyboard("🖨 Выберите тип издания:", $keyboard);
     }
 
     private function stepOrderCalcPrint($userId, $text)
     {
-        if ($text !== "⏭ Пропустить") {
-            $calcResults = Cache::get("bot_user_calc_results_{$userId}", []);
-            $calcResults['print'] = $text;
-            Cache::put("bot_user_calc_results_{$userId}", $calcResults, now()->addHours(2));
+        $orderData = Cache::get("bot_user_order_data_{$userId}", []);
+        $pages  = (int)($orderData['calc_pages'] ?? 0);
+        $format = $orderData['calc_format'] ?? 'A5';
+        $source = $orderData['volume'] ?? '';
+
+        if ($text !== "⏭ Пропустить" && $pages > 0) {
+            $isEditing = isset($orderData['service']) && $orderData['service'] === 'Редактура готового текста';
+            $basePricePerPage = ($format === 'A4') ? ($isEditing ? 70 : 225) : ($isEditing ? 45 : 150);
+            $writingPrice = $pages * $basePricePerPage;
+
+            $ePrice = 0; 
+            $coverPrice = 500; // Базовая цена обложки
+
+            $printPrice = 0;
+            $bindingPrice = 0;
+            $printLabel = '';
+            switch ($text) {
+                case "💻 Только электронная версия (PDF)":
+                    $printLabel = "Электронная версия (PDF)";
+                    break;
+                case "⬛ Печать ч/б + электронная версия":
+                    $printPrice = ($pages / 20) * 800;
+                    $bindingPrice = 700;
+                    $printLabel = "Ч/б печать + переплёт";
+                    break;
+                case "🎨 Цветная печать + электронная версия":
+                    $printPrice = ($pages / 20) * 1200;
+                    $bindingPrice = 700;
+                    $printLabel = "Цветная печать + переплёт";
+                    break;
+                default:
+                    $printLabel = $text;
+            }
+
+            $photoCount = (int)($orderData['calc_photos'] ?? 0);
+            $photoPrice = (int)(ceil($photoCount / 20) * 1000);
+            $coverPrice = 500;
+            $ePrice = 0;
+
+            $totalMin = $writingPrice + $ePrice + $printPrice + $bindingPrice + $coverPrice + $photoPrice;
+            $totalMax = (int)($totalMin * 1.15);
+            $minFmt = number_format($totalMin, 0, '.', ' ');
+            $maxFmt = number_format($totalMax, 0, '.', ' ');
+
+            Cache::put("bot_user_calc_results_{$userId}", [
+                'pages'  => $pages,
+                'format' => $format,
+                'source' => $source,
+                'photos' => $photoCount,
+                'print'  => $printLabel,
+                'range'  => "от {$minFmt} до {$maxFmt} ₽"
+            ], now()->addHours(2));
         }
 
         $this->showOrderSummary($userId);
@@ -859,8 +1023,11 @@ class TelegramController extends Controller
         
         if ($calcResults) {
             $summary .= "➖➖➖➖➖➖➖➖\n" .
-                "🧮 <b>Параметры:</b> {$calcResults['pages']} стр.\n" .
-                "💰 <b>Ориентир. бюджет:</b> {$calcResults['range']}\n";
+                "🧮 <b>Параметры:</b> {$calcResults['pages']} стр. ({$calcResults['format']})\n";
+            if (isset($calcResults['photos']) && $calcResults['photos'] > 0) {
+                $summary .= "🖼 <b>Фотографии:</b> {$calcResults['photos']} шт.\n";
+            }
+            $summary .= "💰 <b>Ориентир. бюджет:</b> {$calcResults['range']}\n";
         }
 
         $summary .= "� <b>Файлы:</b> {$files}\n\n" .
@@ -959,25 +1126,54 @@ class TelegramController extends Controller
 
     public function servicesCommand()
     {
-        $text = "� <b>НАШИ УСЛУГИ И ЦЕНЫ</b>\n" .
-            "➖➖➖➖➖➖➖➖➖➖\n\n" .
-            "📖 <b>1. Мемуары и биографии</b>\n" .
-            "<i>• от 50 000 ₽</i>\n" .
-            "Превратим ваши воспоминания в захватывающую книгу. Интервью, редактура, верстка.\n\n" .
-            "🌳 <b>2. История семьи (Родословная)</b>\n" .
-            "<i>• от 70 000 ₽</i>\n" .
-            "Глубокое исследование корней, архивная работа и создание семейной реликвии.\n\n" .
-            "🏢 <b>3. История компании / Бренда</b>\n" .
-            "<i>• от 100 000 ₽</i>\n" .
-            "Книга о вашем бизнесе: от идеи до успеха. Идеально для партнеров и сотрудников.\n\n" .
-            "🎓 <b>4. Книга эксперта</b>\n" .
-            "<i>• от 60 000 ₽</i>\n" .
-            "Упакуем вашу экспертность, методики и кейсы в качественный нон-фикшн.\n\n" .
-            "✍️ <b>5. Редактура и корректура</b>\n" .
-            "<i>• от 5 000 ₽</i>\n" .
-            "Вычитка, стилистическая правка и подготовка вашего текста к печати.";
+        $text = "📚 <b>НАШИ УСЛУГИ И ЦЕНЫ</b>\n" .
+            "➖➖➖➖➖➖➖➖➖➖\n" .
+            "<i>⚡ Минимальный объём — от 20 страниц.</i>\n\n" .
 
-        BotManager::bot()->reply($text);
+            "📖 <b>1. Мемуары и биографии</b>\n" .
+            "<i>• написание + редактура</i>\n" .
+            "📦 Стандарт: <b>150 ₽/стр (А5) · 225 ₽/стр (А4)</b>\n" .
+            "Превратим ваши воспоминания в захватывающую книгу. Интервью, редактура, верстка.\n\n" .
+            
+            "🌳 <b>2. История семьи (Родословная)</b>\n" .
+            "<i>• исследование + архивная работа</i>\n" .
+            "📦 Стандарт: <b>150 ₽/стр (А5) · 225 ₽/стр (А4)</b>\n" .
+            "Глубокое исследование корней, архивная работа и создание семейной реликвии.\n\n" .
+            
+            "🏢 <b>3. История компании / Бренда</b>\n" .
+            "<i>• написание + оформление</i>\n" .
+            "📦 Стандарт: <b>150 ₽/стр (А5) · 225 ₽/стр (А4)</b>\n" .
+            "Книга о вашем бизнесе: от идеи до успеха. Идеально для партнеров и сотрудников.\n\n" .
+            
+            "🎓 <b>4. Книга эксперта</b>\n" .
+            "<i>• нон-фикшн, методики, кейсы</i>\n" .
+            "📦 Стандарт: <b>150 ₽/стр (А5) · 225 ₽/стр (А4)</b>\n" .
+            "Упакуем вашу экспертность, методики и кейсы в качественный нон-фикшн.\n\n" .
+            
+            "✍️ <b>5. Редактура и корректура</b>\n" .
+            "<i>• вычитка + стилистическая правка</i>\n" .
+            "📦 Стандарт: <b>45 ₽/стр (А5) · 70 ₽/стр (А4)</b>\n" .
+            "Подготовка вашего текста к печати.\n\n" .
+
+            "➖➖➖➖➖➖➖➖➖➖\n" .
+            "🖨 <b>Печать и оформление:</b>\n" .
+            "• Ч/Б печать (за 20 стр.): <b>+800 ₽</b>\n" .
+            "• Цветная печать (за 20 стр.): <b>+1 200 ₽</b>\n" .
+            "• Твёрдый переплёт: <b>+700 ₽</b>\n" .
+            "• Дизайн обложки: <b>+500 ₽</b>\n" .
+            "• Обработка и вставка фото (за 20 шт.): <b>+1 000 ₽</b>\n\n" .
+            "<i>⚠️ Объём книги/журнала должен быть кратен 4 страницам</i>";
+
+        $keyboard = [
+            [
+                ["text" => "🧮 Рассчитать стоимость", "callback_data" => "calc_retry"],
+            ],
+            [
+                ["text" => "✍️ Оставить заявку"],
+            ]
+        ];
+
+        BotManager::bot()->replyInlineKeyboard($text, $keyboard);
     }
 
     public function portfolioCommand()
@@ -1096,60 +1292,106 @@ class TelegramController extends Controller
             return;
         }
 
-        // Валидация: проверяем, что введено число
         $pages = (int) filter_var($text, FILTER_SANITIZE_NUMBER_INT);
 
-        if ($pages <= 0) {
-            BotManager::bot()->reply("Пожалуйста, введите корректное количество страниц (только цифры больше нуля).");
+        if ($pages < 20) {
+            BotManager::bot()->reply("⚠️ Минимальный объём книги — <b>20 страниц</b>.\nПожалуйста, введите количество страниц от 20 (кратное 4).");
+            return;
+        }
+
+        // Число страниц должно быть кратно 4
+        if ($pages % 4 !== 0) {
+            $rounded = (int)(ceil($pages / 4) * 4);
+            BotManager::bot()->reply("⚠️ Книги и журналы выпускаются только с числом страниц, кратным 4.\nБлижайшее подходящее значение: <b>{$rounded}</b>.\n\nВведите количество страниц (кратное 4):");
             return;
         }
 
         $calcData = ['pages' => $pages];
         Cache::put("bot_user_calc_data_{$userId}", $calcData, now()->addHours(2));
-        Cache::put("bot_user_state_{$userId}", self::STATE_CALC_SOURCE, now()->addHours(2));
+        Cache::put("bot_user_state_{$userId}", self::STATE_CALC_FORMAT, now()->addHours(2));
 
-        $text = "<b>Шаг 2 из 3:</b>\nЕсть ли у вас исходные материалы (черновики, дневники, записи)?";
+        $formatText = "📐 <b>Шаг 2 из 4: Формат книги</b>\n\nВыберите формат издания:";
         $keyboard = [
-            [
-                ["text" => "📂 Да, есть много материалов"],
-            ],
-            [
-                ["text" => "🆕 Нет, пишем с нуля"],
-            ],
-            [
-                ["text" => "❌ Отмена"],
-            ]
+            [["text" => "📄 Формат А5 (148×210 мм)"]],
+            [["text" => "📝 Формат А4 (210×297 мм)"]],
+            [["text" => "❌ Отмена"]],
         ];
-
-        BotManager::bot()->replyKeyboard($text, $keyboard);
+        BotManager::bot()->replyKeyboard($formatText, $keyboard);
     }
 
-    private function stepCalcSource($userId, $text)
+    private function stepCalcFormat($userId, $text)
     {
         if ($text === "❌ Отмена") {
             $this->startCommand();
             return;
         }
 
+        $formats = [
+            "📄 Формат А5 (148×210 мм)" => 'A5',
+            "📝 Формат А4 (210×297 мм)" => 'A4',
+        ];
+
+        if (!isset($formats[$text])) {
+            BotManager::bot()->reply("Пожалуйста, выберите формат из меню.");
+            return;
+        }
+
+        $calcData = Cache::get("bot_user_calc_data_{$userId}", []);
+        $calcData['format'] = $formats[$text];
+        $calcData['format_label'] = $text;
+        Cache::put("bot_user_calc_data_{$userId}", $calcData, now()->addHours(2));
+        Cache::put("bot_user_state_{$userId}", self::STATE_CALC_SOURCE, now()->addHours(2));
+
+        $sourceText = "📝 <b>Шаг 3 из 4: Исходные материалы</b>\n\nЕсть ли у вас черновики, дневники, записи?";
+        $keyboard = [
+            [["text" => "📂 Да, есть материалы"]],
+            [["text" => "🆕 Нет, пишем с нуля"]],
+            [["text" => "❌ Отмена"]],
+        ];
+        BotManager::bot()->replyKeyboard($sourceText, $keyboard);
+    }
+
+    private function stepCalcSource($userId, $text)
+    {
+        if ($text === "❌ Отмена") { $this->startCommand(); return; }
+
         $calcData = Cache::get("bot_user_calc_data_{$userId}", []);
         $calcData['source'] = $text;
         Cache::put("bot_user_calc_data_{$userId}", $calcData, now()->addHours(2));
+        Cache::put("bot_user_state_{$userId}", self::STATE_CALC_PHOTOS, now()->addHours(2));
+
+        $keyboard = [
+            [["text" => "🚫 Без фото"]],
+            [["text" => "📸 До 20 фото"]],
+            [["text" => "📸 20-40 фото"]],
+            [["text" => "📸 40-60 фото"]],
+            [["text" => "❌ Отмена"]],
+        ];
+        BotManager::bot()->replyKeyboard("🖼 <b>Шаг 4 из 5: Фотографии</b>\n\nСколько фотографий планируется в книге?\n<i>(Обработка и вставка: 1 000 ₽ за каждые 20 шт.)</i>", $keyboard);
+    }
+
+    private function stepCalcPhotos($userId, $text)
+    {
+        if ($text === "❌ Отмена") { $this->startCommand(); return; }
+
+        $photos = 0;
+        if ($text === "📸 До 20 фото") $photos = 20;
+        if ($text === "📸 20-40 фото") $photos = 40;
+        if ($text === "📸 40-60 фото") $photos = 60;
+
+        $calcData = Cache::get("bot_user_calc_data_{$userId}", []);
+        $calcData['photos'] = $photos;
+        Cache::put("bot_user_calc_data_{$userId}", $calcData, now()->addHours(2));
         Cache::put("bot_user_state_{$userId}", self::STATE_CALC_PRINT, now()->addHours(2));
 
-        $text = "<b>Шаг 3 из 3:</b>\nНужна ли печать тиража или только электронная версия?";
+        $printText = "🖨 <b>Шаг 5 из 5: Тип издания</b>\n\nВыберите, что нужно:";
         $keyboard = [
-            [
-                ["text" => "🖨 Печать тиража"],
-            ],
-            [
-                ["text" => "💻 Только электронная версия"],
-            ],
-            [
-                ["text" => "❌ Отмена"],
-            ]
+            [["text" => "💻 Только электронная версия (PDF)"]],
+            [["text" => "⬛ Печать ч/б + электронная версия"]],
+            [["text" => "🎨 Цветная печать + электронная версия"]],
+            [["text" => "❌ Отмена"]],
         ];
-
-        BotManager::bot()->replyKeyboard($text, $keyboard);
+        BotManager::bot()->replyKeyboard($printText, $keyboard);
     }
 
     private function stepCalcPrint($userId, $text)
@@ -1161,68 +1403,109 @@ class TelegramController extends Controller
 
         $calcData = Cache::get("bot_user_calc_data_{$userId}", []);
         $calcData['print'] = $text;
-        
-        // Расчет стоимости (примерный)
-        $basePrice = 0;
-        
-        // 1. Объем (динамический расчет)
-        $pages = (int)$calcData['pages'];
-        
-        // Базовая цена: 1000 руб за страницу
-        $basePrice = $pages * 1000;
 
-        // 2. Интервью - удалено по требованию
-        // if ($calcData['interview'] === "🎙 Да, нужно интервью") {
-        //     $basePrice += 20000; 
-        // }
+        $pages  = (int)($calcData['pages'] ?? 0);
+        $format = $calcData['format'] ?? 'A5';
 
-        // 3. С нуля или черновики
-        if ($calcData['source'] === "🆕 Нет, пишем с нуля") {
-            $basePrice *= 1.3; // +30% за работу с нуля
+        // 150₽ (A5) или 225₽ (A4) за страницу (написание)
+        $basePricePerPage = ($format === 'A4') ? 225 : 150;
+        $writingPrice = $pages * $basePricePerPage;
+
+        $photoCount = (int)($calcData['photos'] ?? 0);
+        $photoPrice = (int)(ceil($photoCount / 20) * 1000);
+        $coverPrice = 500;
+        $ePrice = 0; 
+
+        // --- Печать ---
+        $printPrice = 0;
+        $bindingPrice = 0;
+        $printLabel = '';
+        switch ($text) {
+            case "💻 Только электронная версия (PDF)":
+                $printLabel = "Электронная версия (PDF)";
+                break;
+            case "⬛ Печать ч/б + электронная версия":
+                $printPrice = ($pages / 20) * 800;
+                $bindingPrice = 700;        // твёрдый переплёт
+                $printLabel = "Ч/б печать + твёрдый переплёт";
+                break;
+            case "🎨 Цветная печать + электронная версия":
+                $printPrice = ($pages / 20) * 1200;
+                $bindingPrice = 700;
+                $printLabel = "Цветная печать + твёрдый переплёт";
+                break;
+            default:
+                BotManager::bot()->reply("Пожалуйста, выберите вариант из меню.");
+                return;
         }
 
-        // 4. Печать
-        $printInfo = "";
-        if ($calcData['print'] === "🖨 Печать тиража") {
-            $printInfo = "\n<i>* Стоимость печати рассчитывается отдельно от тиража</i>";
+        $totalMin = $writingPrice + $ePrice + $printPrice + $bindingPrice + $coverPrice + $photoPrice;
+        $totalMax = (int)($totalMin * 1.15); // вилка +15%
+
+        $photoCount = (int)($calcData['photos'] ?? 0);
+        $photoPrice = (int)(ceil($photoCount / 20) * 1000);
+        $coverPrice = 500;
+
+        $writingFmt = number_format($writingPrice, 0, '.', ' ');
+        $totalMinFmt = number_format($totalMin, 0, '.', ' ');
+        $totalMaxFmt = number_format($totalMax, 0, '.', ' ');
+
+        $breakdown = "🔸 Обложка: <b>500 ₽</b>\n";
+        if ($photoPrice > 0) {
+            $photoPriceFmt = number_format($photoPrice, 0, '.', ' ');
+            $breakdown .= "🔸 Фото ({$photoCount} шт.): <b>{$photoPriceFmt} ₽</b>\n";
+        }
+        
+        if ($printPrice > 0) {
+            $printFmt   = number_format($printPrice, 0, '.', ' ');
+            $bindingFmt = number_format($bindingPrice, 0, '.', ' ');
+            $breakdown .= "🔸 Печать: <b>{$printFmt} ₽</b>\n" .
+                          "🔸 Переплёт: <b>{$bindingFmt} ₽</b>\n";
         }
 
-        $minPrice = number_format($basePrice, 0, '.', ' ');
-        $maxPrice = number_format($basePrice * 1.2, 0, '.', ' '); // +20% к верхней границе вилки
+        $resultText = "💰 <b>Предварительный расчёт стоимости:</b>\n\n" .
+                      "📄 Объём: <b>{$pages} стр.</b> · Формат: <b>{$format}</b>\n" .
+                      "📝 Материалы: <b>{$calcData['source']}</b>\n" .
+                      "🖨 Издание: <b>{$printLabel}</b>\n";
 
-        // Формируем итог
-        $resultText = "💰 <b>Предварительный расчет стоимости:</b>\n\n" .
-                      "🔹 Объем: {$calcData['pages']} стр.\n" .
-                      "🔹 Исходники: {$calcData['source']}\n" .
-                      "🔹 Формат: {$calcData['print']}\n\n" .
-                      "📊 <b>Примерная стоимость работы:</b>\n" .
-                      "от <b>{$minPrice} ₽</b> до <b>{$maxPrice} ₽</b>\n" .
-                      $printInfo . "\n\n" .
-                      "❗ <i>Это предварительная оценка. Точная стоимость может отличаться после детального обсуждения задачи.</i>";
+        if ($photoCount > 0) {
+            $resultText .= "🖼 Фотографии: <b>{$photoCount} шт.</b>\n";
+        }
+        
+        $resultText .= "➖➖➖➖➖➖➖\n" .
+                      "✏️ Написание/Редактура текста: <b>{$writingFmt} ₽</b>\n" .
+                      $breakdown .
+                      "➖➖➖➖➖➖➖\n" .
+                      "📊 <b>Итого: от {$totalMinFmt} до {$totalMaxFmt} ₽</b>\n\n" .
+                      "<i>❗ Предварительная оценка. Точная стоимость уточняется после обсуждения.</i>";
 
         $keyboard = [
             [
-                ["text" => "✅ Зафиксировать цену и оставить заявку", "callback_data" => "fix_price"],
+                ["text" => "✅ Зафиксировать и оставить заявку", "callback_data" => "fix_price"],
             ],
             [
-                ["text" => "🔄 Рассчитать заново", "callback_data" => "calc_retry"], 
+                ["text" => "🔄 Рассчитать заново", "callback_data" => "calc_retry"],
             ]
         ];
 
-        // Сохраняем результаты для заявки
-        Cache::put("bot_user_calc_results_{$userId}", [
-            'pages' => $calcData['pages'],
+        $calcResults = [
+            'pages'  => $pages,
+            'format' => $format,
             'source' => $calcData['source'],
-            'print' => $calcData['print'],
-            'range' => "от {$minPrice} до {$maxPrice} ₽"
-        ], now()->addHours(2));
+            'print'  => $printLabel,
+            'range'  => "от {$totalMinFmt} до {$totalMaxFmt} ₽"
+        ];
+        
+        if ($photoCount > 0) {
+            $calcResults['photos'] = $photoCount;
+        }
 
-        // Очищаем состояние калькулятора, но результат показываем
+        Cache::put("bot_user_calc_results_{$userId}", $calcResults, now()->addHours(2));
+
         Cache::forget("bot_user_state_{$userId}");
         Cache::forget("bot_user_calc_data_{$userId}");
-        
-        // Удаляем Reply клавиатуру и отправляем результат с Inline кнопками
-        BotManager::bot()->replyKeyboard("Расчет готов!", null);
+
+        BotManager::bot()->replyKeyboard("Расчёт готов! 🎉", null);
         BotManager::bot()->replyInlineKeyboard($resultText, $keyboard);
     }
 

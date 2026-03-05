@@ -76,6 +76,7 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'dump_command_path' => 'C:\\Program Files\\PostgreSQL\\18\\bin', 
         ],
 
         'sqlsrv' => [

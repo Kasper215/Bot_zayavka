@@ -10,6 +10,7 @@
         @routes
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @inertiaHead
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
     </head>
     <body class="font-sans antialiased">
         @inertia
