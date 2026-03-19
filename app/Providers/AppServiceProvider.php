@@ -19,12 +19,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if($this->app->environment('production')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+        // Force HTTPS and Root URL if accessing through ngrok
+        if (str_contains(request()->header('X-Forwarded-Host') ?? '', 'ngrok') || 
+            str_contains(request()->getHost(), 'ngrok') ||
+            str_contains(config('app.url'), 'ngrok')) {
+            
+            \URL::forceScheme('https');
+            if (str_contains(config('app.url'), 'ngrok')) {
+                \URL::forceRootUrl(config('app.url'));
+            }
         }
-        // Force https if using ngrok (simple check)
-        if (str_contains(config('app.url'), 'ngrok') || request()->header('X-Forwarded-Proto') === 'https') {
-             \Illuminate\Support\Facades\URL::forceScheme('https');
+
+        if ($this->app->environment('production')) {
+            \URL::forceScheme('https');
         }
     }
 }

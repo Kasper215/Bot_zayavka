@@ -15,8 +15,21 @@ export async function makeAxiosFactory(
         return Promise.reject("Вы не в сети!");
     }
 
-    const tgData = (window as any).Telegram?.WebApp.initData || null;
-    axios.defaults.headers.common["X-TG-DATA"] = tgData ? btoa(tgData) : null;
+    // Не требуем Telegram WebApp жестко. Пытаемся взять данные, если они есть.
+    let tgData = null;
+    try {
+        if (window && (window as any).Telegram && (window as any).Telegram.WebApp) {
+            tgData = (window as any).Telegram.WebApp.initData || null;
+        }
+    } catch (e) {
+        // Игнорируем ошибку, если нет объекта window или Telegram
+    }
+    
+    if (tgData) {
+        axios.defaults.headers.common["X-TG-DATA"] = btoa(tgData);
+    } else {
+        delete axios.defaults.headers.common["X-TG-DATA"];
+    }
 
     const alertStore = useAlertStore();
 
@@ -50,7 +63,7 @@ export async function makeAxiosFactory(
     } catch (error: any) {
         // Проверка на 419 ошибку
         if (error?.response?.status === 419) {
-            alertStore.show("Сессия истекла, страница будет перезагружена", "warning");
+            alertStore.show("Сессия истекла, страница будет перезагружена", "info");
             window.location.reload();
             // @ts-ignore
             return Promise.reject("Сессия истекла");

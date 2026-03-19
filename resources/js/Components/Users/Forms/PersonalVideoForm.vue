@@ -1,6 +1,5 @@
-
 <template>
-    <div class="container py-4" v-if="self">
+    <div class="container py-4">
         <!-- ЛОГОТИП -->
         <div class="text-center mb-4">
             <img src="/пнглого.png" alt="logo" style="max-width: 160px"/>
@@ -244,27 +243,11 @@ export default {
     },
     computed: {
         tg() {
-            return window.Telegram.WebApp;
+            return window.Telegram?.WebApp || null;
         },
-        self() {
-            return this.userStore.self
-        },
-
     },
     created() {
-        this.userStore.fetchSelf().then(() => {
-            let userName = (this.self.name||'').split(" ")
-
-            if (userName.length<=1)
-                userName = this.self.fio_from_telegram.split(" ")
-
-            this.form.name = userName[0] || ''
-            this.form.patronymic = userName[1] || ''
-            this.form.surname = userName[2] || ''
-            this.form.city = this.self.city || ''
-            this.form.region = this.self.region || ''
-            this.form.birthday = this.self.birthday || ''
-        })
+        // Раньше тут был fetchSelf(), для независимого PWA форма изначально пустая
     },
     methods: {
         openRules() {
@@ -272,9 +255,21 @@ export default {
         },
 
         submitForm() {
-            this.userStore.uploadForm(this.form)
+            this.userStore.uploadAnonymousForm(this.form)
                 .then(() => {
-                    this.tg.close()
+                    if(this.tg) this.tg.close();
+                    else {
+                        this.form = {
+                            surname: "",
+                            name: "",
+                            patronymic: "",
+                            city: "",
+                            region: "",
+                            birthday: "",
+                            agreeWithRules: false,
+                            agreeUseVideo: false,
+                        };
+                    }
                 })
         },
 

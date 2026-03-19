@@ -70,6 +70,34 @@ const clearAllLeads = () => {
         });
     }
 };
+
+const parseFiles = (files) => {
+    if (!files) return [];
+    try {
+        return typeof files === 'string' ? JSON.parse(files) : files;
+    } catch (e) {
+        return [];
+    }
+};
+
+const formatSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const deleteFile = (leadId, filename) => {
+    if (confirm(`Удалить файл ${filename}?`)) {
+        router.delete(route('admin.leads.delete-file', { lead: leadId, filename: filename }), {
+            onSuccess: () => {
+                // В Inertia props обновятся сами, но если нужно вручную - можно обновить local state
+                editingLead.value.files = JSON.stringify(parseFiles(editingLead.value.files).filter(f => f.name !== filename));
+            }
+        });
+    }
+};
 </script>
 
 <template>
@@ -285,11 +313,45 @@ const clearAllLeads = () => {
                             <div class="space-y-3">
                                 <div>
                                     <div class="text-xs text-slate-500 mb-0.5">Контакты из формы</div>
-                                    <div class="font-medium text-slate-900 break-words whitespace-pre-wrap">{{ editingLead.contacts }}</div>
+                                    <div class="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                        <div class="font-medium text-slate-900 break-words whitespace-pre-wrap">{{ editingLead.contacts }}</div>
+                                    </div>
                                 </div>
-                                <div v-if="editingLead.files">
-                                    <div class="text-xs text-slate-500 mb-0.5">Файлы</div>
-                                    <div class="font-medium text-slate-900 break-all text-sm">{{ editingLead.files }}</div>
+                                <div v-if="editingLead.files" class="mt-4">
+                                    <div class="text-xs text-slate-500 mb-2 uppercase font-bold tracking-tight">Прикрепленные файлы</div>
+                                    <div class="space-y-2">
+                                        <div v-for="(file, idx) in parseFiles(editingLead.files)" :key="idx" class="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg group hover:border-indigo-300 transition-colors">
+                                            <div class="flex items-center gap-2 overflow-hidden">
+                                                <span class="text-lg">📄</span>
+                                                <div class="flex flex-col overflow-hidden">
+                                                    <span class="text-xs font-medium text-slate-900 truncate" :title="file.name">{{ file.name }}</span>
+                                                    <span class="text-[10px] text-slate-400">{{ formatSize(file.size) }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 ml-2 no-shrink">
+                                                <a 
+                                                    :href="route('admin.leads.download', { lead: editingLead.id, filename: file.name })" 
+                                                    target="_blank"
+                                                    class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200"
+                                                    title="Скачать файл"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                </a>
+                                                <button 
+                                                    v-if="Number(userRole) === 1"
+                                                    @click="deleteFile(editingLead.id, file.name)"
+                                                    class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200"
+                                                    title="Удалить файл"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -329,7 +391,7 @@ const clearAllLeads = () => {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                            <label class="text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
                                 Заметки менеджера
                                 <span class="text-[10px] text-slate-400 font-normal bg-slate-100 px-2 py-0.5 rounded-full">Внутренние</span>
                             </label>
@@ -363,4 +425,21 @@ const clearAllLeads = () => {
         </div>
     </AdminLayout>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+</style>
 

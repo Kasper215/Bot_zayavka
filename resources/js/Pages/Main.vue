@@ -27,12 +27,17 @@ export default {
 
     computed: {
         tg() {
-            return window.Telegram.WebApp;
+            return window.Telegram?.WebApp || null;
         },
 
         tgUser() {
-            const urlParams = new URLSearchParams(this.tg.initData);
-            return JSON.parse(urlParams.get('user'));
+            if(!this.tg || !this.tg.initData) return null;
+            try {
+                const urlParams = new URLSearchParams(this.tg.initData);
+                return JSON.parse(urlParams.get('user'));
+            } catch (e) {
+                return null;
+            }
         },
     },
     mounted() {

@@ -1,15 +1,14 @@
 <script setup>
-
 import MenuUser from "@/Components/MenuUser.vue";
-
+import Layout from "@/Layouts/Layout.vue";
 </script>
 
 <template>
-
-    <div class="container-fluid p-3">
-        <MenuUser></MenuUser>
-    </div>
-
+    <Layout>
+        <div class="container-fluid p-3">
+            <MenuUser></MenuUser>
+        </div>
+    </Layout>
 </template>
 <script>
 
@@ -22,9 +21,8 @@ export default {
     },
     computed: {
         tg() {
-            return window.Telegram.WebApp;
+            return window.Telegram?.WebApp || null;
         },
-
     },
     methods: {}
 

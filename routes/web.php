@@ -78,7 +78,7 @@ Route::match(['get', 'post'], '/admin-auth', function(Request $request) {
 
 
 Route::get('/', function() {
-    return redirect('/admin');
+    return Inertia::render('MenuPage');
 });
 
 Route::get('/bot-info', [\App\Http\Controllers\TelegramController::class, "homePage"])->name('bot.home');
@@ -99,6 +99,8 @@ Route::prefix('admin')
         Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
         Route::get('/leads/export', [\App\Http\Controllers\Admin\LeadController::class, 'export'])->name('leads.export');
+        Route::get('/leads/{lead}/download/{filename}', [\App\Http\Controllers\Admin\LeadController::class, 'downloadFile'])->name('leads.download');
+        Route::delete('/leads/{lead}/file/{filename}', [\App\Http\Controllers\Admin\LeadController::class, 'deleteFile'])->name('leads.delete-file');
         Route::put('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'update'])->name('leads.update');
         Route::delete('/leads/destroy-all', [\App\Http\Controllers\Admin\LeadController::class, 'destroyAll'])->name('leads.destroy-all');
         

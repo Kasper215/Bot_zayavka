@@ -123,4 +123,39 @@ class LeadController extends Controller
             'leads_' . now()->format('Y-m-d_H-i') . '.xlsx'
         );
     }
+
+    /**
+     * Download a file from a lead.
+     */
+    public function downloadFile(Lead $lead, $filename)
+    {
+        $path = "leads/{$lead->id}/{$filename}";
+        
+        if (!\Storage::disk('public')->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        return \Storage::disk('public')->download($path, $filename);
+    }
+
+    /**
+     * Delete a file from a lead.
+     */
+    public function deleteFile(Lead $lead, $filename)
+    {
+        $path = "leads/{$lead->id}/{$filename}";
+        
+        if (\Storage::disk('public')->exists($path)) {
+            \Storage::disk('public')->delete($path);
+        }
+
+        $files = json_decode($lead->files, true) ?: [];
+        $files = array_filter($files, function($file) use ($filename) {
+            return $file['name'] !== $filename;
+        });
+
+        $lead->update(['files' => count($files) > 0 ? json_encode(array_values($files)) : null]);
+
+        return back()->with('success', 'Файл удален');
+    }
 }

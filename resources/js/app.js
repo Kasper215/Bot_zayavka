@@ -3,11 +3,11 @@ import '../css/app.css';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
-import { far } from '@fortawesome/free-regular-svg-icons';
-import { fab } from '@fortawesome/free-brands-svg-icons';
+// Import only the specific icons you actually use here
+// import { faUser } from '@fortawesome/free-solid-svg-icons';
 
-library.add(fas, far, fab);
+// library.add(faUser);
+
 
 
 import { createApp, h } from 'vue';
@@ -19,6 +19,16 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { useAlertStore } from './stores/utillites/useAlertStore'
 import { i18n } from "./i18n";
 import VueTheMask from "vue-the-mask";
+// import { registerSW } from 'virtual:pwa-register';
+
+// Debug error handler for mobile
+window.onerror = function(msg, url, line) {
+    alert("App Error: " + msg + "\nAt: " + url + ":" + line);
+    return false;
+};
+
+// PWA Registration - disabled for debugging
+// registerSW({ immediate: true });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

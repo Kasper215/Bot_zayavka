@@ -48,6 +48,17 @@ export const useUsersStore = defineStore('users', {
             }
             return true
         },
+        async fetchPublicSelf() {
+            this.loading = true;
+            try {
+                const {data} = await axios.get('/api/public/me');
+                this.self = data;
+            } catch (e) {
+                this.self = null;
+            } finally {
+                this.loading = false;
+            }
+        },
         // @ts-ignore
         async fetchFiltered(page = 1) {
             this.loading = true
@@ -120,6 +131,35 @@ export const useUsersStore = defineStore('users', {
             } catch (e: any) {
                 this.error = e?.message || 'Failed to load user'
                 throw e
+            }
+        },
+        async uploadAnonymousForm(form: object, files: File[] = []): Promise<void> {
+            this.loading = true
+            this.error = null
+
+            const alertStore = useAlertStore()
+
+            try {
+                const formData = new FormData()
+
+                Object.entries(form).forEach(([key, value]) => {
+                    formData.append(key, String(value));
+                });
+
+                // Добавляем файлы
+                files.forEach((file, index) => {
+                    formData.append(`files[${index}]`, file);
+                });
+
+                const {data} = await makeAxiosFactory(`/api/public/submit-form`, 'POST', formData)
+                alertStore.show("Ваши данные успешно отправлены!", "success")
+
+            } catch (err) {
+                const error = err as AxiosError<{ message?: string }>
+                this.error = error.response?.data?.message || 'Ошибка при отправке данных'
+                alertStore.show(this.error, "error")
+            } finally {
+                this.loading = false
             }
         },
         async uploadForm(form: object): Promise<void> {

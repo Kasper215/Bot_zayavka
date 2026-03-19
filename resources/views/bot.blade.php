@@ -21,6 +21,7 @@
     <!-- Scripts -->
     @routes
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+    <link rel="manifest" href="/manifest.webmanifest">
     @inertiaHead
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -125,22 +126,23 @@
 <script>
     window.onload = function () {
         window.addEventListener('online', () => {
-            /*  window.Telegram.WebApp.showAlert("Вы снова онлайн!")*/
-            console.log("вы снова онлайн")
+             console.log("вы снова онлайн")
         });
         window.addEventListener('offline', () => {
             console.log("вы сейчас офлайн")
-            window.Telegram.WebApp.showAlert("Вы сейчас офлайн!")
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+                window.Telegram.WebApp.showAlert("Вы сейчас офлайн!")
+            } else {
+                alert("Вы сейчас офлайн!");
+            }
         });
 
         let theme = localStorage.getItem("delivery_bot_theme") || null
 
         if (theme) {
             let changeTheme = document.querySelector("#theme")
-            changeTheme.href = theme
+            if (changeTheme) changeTheme.href = theme
         }
-
-
     };
 </script>
 
