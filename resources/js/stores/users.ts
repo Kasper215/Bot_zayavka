@@ -146,7 +146,6 @@ export const useUsersStore = defineStore('users', {
                     formData.append(key, String(value));
                 });
 
-                // Добавляем файлы
                 files.forEach((file, index) => {
                     formData.append(`files[${index}]`, file);
                 });

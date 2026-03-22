@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class LeadController extends Controller
@@ -38,9 +39,12 @@ class LeadController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        // Если это менеджер (роль 2), показываем только закрепленные за ним заявки
+        // Если это менеджер (роль 2), показываем закрепленные за ним ИЛИ новые (незакрепленные) заявки
         if ($user->role == 2) {
-            $query->where('manager_id', $user->id);
+            $query->where(function($q) use ($user) {
+                $q->where('manager_id', $user->id)
+                  ->orWhereNull('manager_id');
+            });
         }
 
         $leads = $query
@@ -131,11 +135,14 @@ class LeadController extends Controller
     {
         $path = "leads/{$lead->id}/{$filename}";
         
-        if (!\Storage::disk('public')->exists($path)) {
+        if (!Storage::disk('local')->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
-        return \Storage::disk('public')->download($path, $filename);
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('local');
+
+        return $disk->download($path, $filename);
     }
 
     /**
@@ -145,8 +152,8 @@ class LeadController extends Controller
     {
         $path = "leads/{$lead->id}/{$filename}";
         
-        if (\Storage::disk('public')->exists($path)) {
-            \Storage::disk('public')->delete($path);
+        if (Storage::disk('local')->exists($path)) {
+            Storage::disk('local')->delete($path);
         }
 
         $files = json_decode($lead->files, true) ?: [];
@@ -157,5 +164,17 @@ class LeadController extends Controller
         $lead->update(['files' => count($files) > 0 ? json_encode(array_values($files)) : null]);
 
         return back()->with('success', 'Файл удален');
+    }
+    /**
+     * Check for any new leads (for polling).
+     */
+    public function checkNew(Request $request)
+    {
+        $latestLead = Lead::orderBy('id', 'desc')->first();
+
+        return response()->json([
+            'latest_id' => $latestLead ? $latestLead->id : 0,
+            'last_client' => $latestLead ? ($latestLead->client_name ?: $latestLead->contacts) : 'Unknown'
+        ]);
     }
 }

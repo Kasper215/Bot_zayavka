@@ -33,7 +33,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'has_push' => $request->user() ? $request->user()->pushSubscriptions()->exists() : false,
             ],
+            'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+            'csrf_token' => csrf_token(),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

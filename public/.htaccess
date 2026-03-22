@@ -18,4 +18,11 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Service Worker Scope Fix
+    <IfModule mod_headers.c>
+        <FilesMatch "sw\.js$">
+            Header set Service-Worker-Allowed "/"
+        </FilesMatch>
+    </IfModule>
 </IfModule>

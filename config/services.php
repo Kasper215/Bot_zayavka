@@ -36,5 +36,4 @@ return [
         'redirect' => env('YANDEX_REDIRECT_URI'),
     ],
 
-
 ];

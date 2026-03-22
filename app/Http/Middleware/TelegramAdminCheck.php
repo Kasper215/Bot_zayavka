@@ -5,8 +5,6 @@ namespace App\Http\Middleware;
 use App\Enums\RoleEnum;
 use App\Facades\BotMethods;
 use App\Http\Middleware\Service\Utilities;
-use App\Models\Bot;
-use App\Models\BotUser;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -33,9 +31,10 @@ class TelegramAdminCheck
 
             $botUser->telegram_chat_id = env("TELEGRAM_ADMIN_CHANNEL");
             $botUser->fio_from_telegram = "РЕЖИМ ОТЛАДКИ СИСТЕМЫ";
-            $botUser->role = RoleEnum::SUPERADMIN->value;
+            $botUser->role = RoleEnum::ADMIN->value;
 
-            $request->botUser = $botUser;
+            /** @var \App\Models\User $botUser */
+            $request->botUser = $botUser; // @phpstan-ignore-line
 
             return $next($request);
         }
@@ -71,7 +70,8 @@ class TelegramAdminCheck
 
 
         if ($this->validateTGData($tgData)) {
-            $request->botUser = $botUser;
+            /** @var \App\Models\User $botUser */
+            $request->botUser = $botUser; // @phpstan-ignore-line
             return $next($request);
         } else {
             return \response()->json(["error" => "some error"], 400);

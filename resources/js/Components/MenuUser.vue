@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import BookLeadForm from "@/Components/Users/Forms/BookLeadForm.vue";
 import PriceCalculator from "@/Components/Users/Forms/PriceCalculator.vue";
 import AIBookStarter from "@/Components/Users/Forms/AIBookStarter.vue";
@@ -62,9 +62,10 @@ const activeTab = ref('form');
 .tab-btn {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     padding: 12px;
     border: none;
     background: transparent;
@@ -72,8 +73,12 @@ const activeTab = ref('form');
     border-radius: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
+}
+
+.t-icon {
+    font-size: 1.5rem;
 }
 
 .tab-btn:hover {
@@ -84,7 +89,7 @@ const activeTab = ref('form');
 .tab-btn.active {
     background: #60a5fa;
     color: #fff;
-    box-shadow: 0 4px 15px rgba(96, 165, 250, 0.3);
+    box-shadow: 0 4px 20px rgba(96, 165, 250, 0.4);
 }
 
 .standalone-container {

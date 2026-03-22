@@ -12,12 +12,14 @@ class CheckRole
         'user' => 0,
         'manager' => 1,
         'admin' => 2,
+        'kasper' => 3,
     ];
 
     protected $numericToNamed = [
         0 => 'user',
-        2 => 'manager',
-        1 => 'admin',
+        1 => 'manager',
+        2 => 'admin',
+        3 => 'kasper',
     ];
 
     public function handle(Request $request, Closure $next, $role = null)

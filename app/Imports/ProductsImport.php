@@ -2,26 +2,13 @@
 
 namespace App\Imports;
 
-use App\Models\Product;
-use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
+/**
+ * DEPRECATED: This class was part of the old sales/product system and is currently not used.
+ */
 class ProductsImport implements WithMultipleSheets
 {
-    public $titles;
-
-    public function __construct(array $titles)
-    {
-        $this->titles = $titles;
-    }
-
-    public function sheets(): array
-    {
-        $tmp = [];
-        foreach ($this->titles as $title)
-        {
-            $tmp[] =    new ProductsSheetImport($title);
-        }
-        return $tmp;
-    }
+    public function __construct(array $titles) {}
+    public function sheets(): array { return []; }
 }

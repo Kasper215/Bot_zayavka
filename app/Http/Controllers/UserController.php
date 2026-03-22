@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 
 use App\Enums\RoleEnum;
-use App\Exports\UsersExport;
-use App\Models\Agent;
-use App\Models\Supplier;
 use App\Models\User;
 use Carbon\Carbon;
-use HttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -245,18 +242,7 @@ class UserController extends Controller
         $user->role = $request->input('role');
         $user->save();
 
-        if ($user->role === RoleEnum::AGENT->value) {
-            Agent::query()
-                ->updateOrCreate([
-                    'user_id' => $user->id,
 
-                ], [
-                    'name' => $user->fio_from_telegram ?? $user->name,
-                    'phone' => '',
-                    'email' => '',
-                    'region' => '',
-                ]);
-        }
 
         $newRoleName = $user->getRoleName();
 
@@ -307,16 +293,7 @@ class UserController extends Controller
         $data["registration_at"] = Carbon::now();
         $user->update($data);
 
-        Agent::query()
-            ->updateOrCreate([
-                'user_id' => $user->id,
 
-            ], [
-                'name' => $user->fio_from_telegram ?? $user->name,
-                'phone' => $phone,
-                'email' => $email,
-                'region' => $region ?? '',
-            ]);
 
 
         return response()->json($user);
@@ -382,58 +359,5 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    /**
-     * @throws HttpException
-     */
-    public function exportAdmins(Request $request)
-    {
-        $user = $request->botUser ?? null;
 
-        if (is_null($user))
-            throw new HttpException("Пользователь не авторизован", 403);
-
-        $fileName = "export-admins-" . Carbon::now()->format("Y-m-d H-i-s") . ".xlsx";
-        $data = Excel::raw(new \App\Exports\AdminsExport(), \Maatwebsite\Excel\Excel::XLSX);
-        \App\Facades\BotMethods::bot()
-            ->sendDocument($user->telegram_chat_id, "Экспорт списка администраторов",
-                \Telegram\Bot\FileUpload\InputFile::createFromContents($data, $fileName));
-        return response()->noContent();
-    }
-
-    public function getTelegramLink(Request $request, $id)
-    {
-
-        $user = $request->botUser ?? null;
-
-        $findUser = User::findOrFail($id);
-
-        $tmpUserLink = $findUser->getUserTelegramLink();
-
-        $userInfo = $findUser->toTelegramText();
-
-        \App\Facades\BotMethods::bot()->sendMessage(
-            $user->telegram_chat_id,
-            "#ссылка_на_пользователя\n<b>Ссылка на пользователя</b>\n$userInfo\n$tmpUserLink"
-        );
-
-        return response()->json($user);
-    }
-
-    /**
-     * @throws HttpException
-     */
-    public function export(Request $request)
-    {
-        $user = $request->botUser ?? null;
-
-        if (is_null($user))
-            throw new HttpException("Пользователь не авторизован", 403);
-
-        $fileName = "export-users-" . Carbon::now()->format("Y-m-d H-i-s") . ".xlsx";
-        $data = Excel::raw(new \App\Exports\UsersExport(), \Maatwebsite\Excel\Excel::XLSX);
-        \App\Facades\BotMethods::bot()
-            ->sendDocument($user->telegram_chat_id, "Экспорт списка пользователей",
-                \Telegram\Bot\FileUpload\InputFile::createFromContents($data, $fileName));
-        return response()->noContent();
-    }
 }

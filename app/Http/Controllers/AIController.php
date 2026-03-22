@@ -34,30 +34,34 @@ class AIController extends Controller
                 'Authorization' => "Bearer {$apiKey}",
                 'HTTP-Referer' => config('app.url'),
                 'X-Title' => 'BioBook App',
-            ])->post('https://openrouter.ai/api/v1/chat/completions', [
-                'model' => 'google/gemini-2.0-flash-lite-001',
+            ])->timeout(30)->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => 'google/gemini-2.0-flash-001',
                 'messages' => [
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user', 'content' => "Идея книги: " . $request->prompt],
                 ],
                 'temperature' => 0.7,
-                'max_tokens' => 300,
+                'max_tokens' => 500,
             ]);
 
             if ($response->successful()) {
                 $content = $response->json('choices.0.message.content');
+                if (!$content) {
+                    Log::error('OpenRouter Empty Content: ' . $response->body());
+                    return response()->json(['message' => 'ИИ вернул пустой ответ'], 500);
+                }
                 return response()->json([
                     'status' => 'ok',
                     'text' => trim($content)
                 ]);
             }
 
-            Log::error('OpenRouter Error: ' . $response->body());
+            Log::error('OpenRouter Error Status ' . $response->status() . ': ' . $response->body());
             return response()->json(['message' => 'Ошибка генерации текста'], 500);
 
         } catch (\Exception $e) {
-            Log::error('AI Generation Exception: ' . $e->getMessage());
-            return response()->json(['message' => 'Не удалось связаться с ИИ'], 500);
+            Log::error('AI Generation Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['message' => 'Не удалось связаться с ИИ: ' . $e->getMessage()], 500);
         }
     }
 }

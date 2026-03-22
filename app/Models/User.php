@@ -12,9 +12,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 
+use NotificationChannels\WebPush\HasPushSubscriptions;
+
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasPushSubscriptions;
 
     /**
      * The attributes that are mass assignable.
@@ -71,8 +73,9 @@ class User extends Authenticatable
     {
         $roles = [
             0 => 'Пользователь',
-            1 => 'Администратор',
-            2 => 'Менеджер',
+            1 => 'Менеджер',
+            2 => 'Администратор',
+            3 => 'Kasper',
         ];
 
         return $roles[$this->role] ?? 'Неизвестная роль';
@@ -80,8 +83,10 @@ class User extends Authenticatable
 
     public function toTelegramText(): string
     {
-        if (!is_null($this->birthday ?? null))
+        $age = null;
+        if (!is_null($this->birthday ?? null)) {
             $age = Carbon::parse($this->birthday)->age;
+        }
 
         $fields = [
             '#' => $this->id,
@@ -108,19 +113,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin
+     * Check if user is admin or higher
      */
     public function isAdmin(): bool
     {
-        return (int)$this->role === 1;
+        return (int)$this->role === 2 || (int)$this->role === 3;
     }
 
     /**
-     * Check if user is manager
+     * Check if user is manager or higher
      */
     public function isManager(): bool
     {
-        return (int)$this->role === 2;
+        return (int)$this->role === 1 || (int)$this->role === 2 || (int)$this->role === 3;
+    }
+
+    /**
+     * Check if user is Kasper
+     */
+    public function isKasper(): bool
+    {
+        return (int)$this->role === 3;
     }
 
 }

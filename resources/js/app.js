@@ -19,16 +19,45 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { useAlertStore } from './stores/utillites/useAlertStore'
 import { i18n } from "./i18n";
 import VueTheMask from "vue-the-mask";
-// import { registerSW } from 'virtual:pwa-register';
 
 // Debug error handler for mobile
-window.onerror = function(msg, url, line) {
-    alert("App Error: " + msg + "\nAt: " + url + ":" + line);
+window.onerror = function (msg, url, line) {
+    console.error("App Error: " + msg + "\nAt: " + url + ":" + line);
     return false;
 };
 
-// PWA Registration - disabled for debugging
-// registerSW({ immediate: true });
+// PWA Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+                console.log('PWA: Registered with scope /', reg.scope);
+                // Listen for updates
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                console.log('PWA: New content available, will be used on next reload');
+                            } else {
+                                console.log('PWA: Content cached for offline use');
+                            }
+                        }
+                    };
+                };
+            })
+            .catch(error => {
+                console.error('PWA: Registration failed:', error);
+            });
+    });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    // e.preventDefault();
+    console.log('PWA: beforeinstallprompt triggered');
+    window.deferredPrompt = e;
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

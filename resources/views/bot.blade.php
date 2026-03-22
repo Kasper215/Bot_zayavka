@@ -21,7 +21,9 @@
     <!-- Scripts -->
     @routes
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="/build/manifest.webmanifest" crossorigin="use-credentials">
+    <link rel="apple-touch-icon" href="/pwa-icon.jpg">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     @inertiaHead
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"

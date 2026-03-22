@@ -1,17 +1,9 @@
 <?php
 
-
-use App\Http\Controllers\UserController;
-
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,142 +16,80 @@ use Maatwebsite\Excel\Facades\Excel;
 |
 */
 
+Route::get('/', function () {
+    return \Inertia\Inertia::render('MenuPage');
+})->name('home');
 
-Route::any('/register-webhook', [\App\Http\Controllers\TelegramController::class, "registerWebhooks"]);
-Route::post('/webhook', [\App\Http\Controllers\TelegramController::class, "handler"]);
-Route::get("/bot", [\App\Http\Controllers\TelegramController::class, "homePage"]);
-Route::get("/blocked", [\App\Http\Controllers\TelegramController::class, "blockedPage"])
-    ->name("blocked");
+Route::post('/leads/submit', [\App\Http\Controllers\PublicLeadController::class, 'submitForm'])
+    ->name('leads.submit')
+    ->middleware('throttle:5,1');
 
-// Единая точка входа для админки
-Route::get('/admin', function(Request $request) {
-    if ($request->user()->role == 0) {
-        return redirect()->route('bot.home');
-    }
-    return redirect()->route('admin.dashboard');
-})->middleware('auth');
+// Auth Routes (Login)
+require __DIR__.'/auth.php';
 
-// Авторизация Mini App для админки (получение данных)
-Route::match(['get', 'post'], '/admin-auth', function(Request $request) {
-    if ($request->isMethod('post') && $request->has('initData')) {
-        $queryStr = $request->input('initData');
-        
-        $utilities = new class { use \App\Http\Middleware\Service\Utilities; };
-        
-        if (!$queryStr || !$utilities->validateTGData($queryStr)) {
-            \Illuminate\Support\Facades\Log::error("TG Auth failed. Data: " . $queryStr);
-            return response("Ошибка авторизации или подпись не верна. Откройте приложение через Telegram.", 403);
-        }
+// Admin Routes (Auth + Role Manager/Admin)
+Route::group([
+    'prefix' => 'admin',
+    'middleware' => ['auth']
+], function () {
 
-        $tgData = [];
-        parse_str($queryStr, $tgData);
-        
-        if(!isset($tgData['user'])) {
-            return response("Нет данных о пользователе Telegram.", 403);
-        }
+    // Common routes for all staff
+    Route::get('/', function () {
+        return redirect()->route('admin.leads.index');
+    });
 
-        $tgUser = json_decode($tgData['user'], true);
-        
-        $user = User::query()->where('telegram_chat_id', $tgUser['id'])->first();
-        
-        if (!$user || $user->role == 0) {
-            return response("У вас нет прав администратора.", 403);
-        }
-        
-        Auth::login($user);
-        
-        // Серверный редирект на дашборд после успешной формы
-        return redirect()->route('admin.dashboard');
-    }
+    Route::get('/dashboard', function () {
+        return redirect()->route('admin.leads.index');
+    })->name('dashboard');
 
-    return view('bot-login');
-});
+    // Subscription route for push
+    Route::post('/notifications/subscribe', [\App\Http\Controllers\Admin\UserController::class, 'subscribeNotifications'])->name('notifications.subscribe');
 
-
-
-Route::get('/', function() {
-    return Inertia::render('MenuPage');
-});
-
-Route::get('/bot-info', [\App\Http\Controllers\TelegramController::class, "homePage"])->name('bot.home');
-
-// Удобная ссылка для выхода
-Route::get('/logout', function(Request $request) {
-    Auth::guard('web')->logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return redirect('/login');
-})->name('logout.get');
-
-// Админ-панель для заявок
-Route::prefix('admin')
-    ->name('admin.')
-    ->middleware(['auth', 'tg.role:manager']) // Минимальная роль для доступа
-    ->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+    // Leads Management
+    Route::group([
+        'middleware' => ['tg.role:manager'],
+        'as' => 'admin.'
+    ], function () {
         Route::get('/leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
+        Route::get('/leads/check-new', [\App\Http\Controllers\Admin\LeadController::class, 'checkNew'])->name('leads.check-new');
         Route::get('/leads/export', [\App\Http\Controllers\Admin\LeadController::class, 'export'])->name('leads.export');
         Route::get('/leads/{lead}/download/{filename}', [\App\Http\Controllers\Admin\LeadController::class, 'downloadFile'])->name('leads.download');
         Route::delete('/leads/{lead}/file/{filename}', [\App\Http\Controllers\Admin\LeadController::class, 'deleteFile'])->name('leads.delete-file');
-        Route::put('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'update'])->name('leads.update');
-        Route::delete('/leads/destroy-all', [\App\Http\Controllers\Admin\LeadController::class, 'destroyAll'])->name('leads.destroy-all');
         
-        // Управление сотрудниками
-        Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
-        Route::patch('/users/{user}/role', [\App\Http\Controllers\Admin\UserController::class, 'updateRole'])->name('users.update-role');
-        
-        // Рассылка
-        Route::get('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'index'])->name('broadcast.index');
-        Route::post('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'send'])->name('broadcast.send');
-
-        // Настройка команд бота
-        Route::get('/setup-commands', function() {
-            $commands = [
-                ['command' => 'start', 'description' => 'Запустить бота / Главное меню'],
-                ['command' => 'portfolio', 'description' => 'Посмотреть портфолио'],
-                ['command' => 'faq', 'description' => 'Часто задаваемые вопросы'],
-                ['command' => 'contacts', 'description' => 'Связь с менеджером'],
-            ];
-            
-            $bot = \App\Facades\BotMethods::bot();
-            $bot->setMyCommands($commands);
-            
-            // Описание бота (то, что видно до нажатия Старт)
-            $description = "👋 Добро пожаловать в BioBook!\nЗдесь вы можете оставить заявку на написание книги. Будь то биография, мемуары или корпоративная история — мы поможем превратить вашу идею в готовый текст.\n\n👇 Нажмите СТАРТ, чтобы заполнить короткую анкету.";
-            $bot->setMyDescription($description);
-            
-            // Короткое описание (то, что видно в профиле бота)
-            $shortDescription = "Ваш персональный гид в мире историй и биографий. Оформите заявку на книгу прямо здесь!";
-            $bot->setMyShortDescription($shortDescription);
-
-            // Устанавливаем кнопку меню
-            $bot->setChatMenuButton([
-                'type' => 'commands'
-            ]);
-            
-            return "Настройки бота успешно обновлены (команды, описание и кнопка меню)!";
-        })->name('setup.commands');
+        Route::patch('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'update'])->name('leads.update');
+        Route::delete('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'destroy'])->name('leads.destroy');
+        Route::delete('/leads/all/destroy', [\App\Http\Controllers\Admin\LeadController::class, 'destroyAll'])->name('leads.destroy-all');
     });
 
-Route::prefix("bot-api")
-    ->middleware(["tg.auth"])
-    ->group(function () {
+    // Users & Broadcast Management (Admin Only)
+    Route::group([
+        'middleware' => ['tg.role:admin']
+    ], function () {
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->names('admin.users');
+        Route::post('/users/{user}/toggle-role', [\App\Http\Controllers\Admin\UserController::class, 'toggleRole'])->name('admin.users.toggle-role');
+        Route::post('/users/{user}/block', [\App\Http\Controllers\Admin\UserController::class, 'block'])->name('admin.users.block');
+        Route::post('/users/{user}/unblock', [\App\Http\Controllers\Admin\UserController::class, 'unblock'])->name('admin.users.unblock');
 
-
-        Route::post('/users/self', [\App\Http\Controllers\TelegramController::class, "getSelf"]);
-
-        Route::prefix('users')
-            ->middleware(["tg.role:user"])
-            ->group(function () {
-                // Список всех пользователей
-                Route::post('/send-video', [UserController::class, 'sendVideo']);
-                Route::post('/send-form', [UserController::class, 'sendForm']);
-                // Создать нового пользователя
-
-            });
+        Route::get('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'index'])->name('admin.broadcast.index');
+        Route::post('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'send'])->name('admin.broadcast.send');
     });
+});
 
-require __DIR__.'/auth.php';
+// Telegram Bot API Routes (Custom auth)
+Route::group([
+    'prefix' => 'bot-api',
+    'middleware' => ['tg.auth']
+], function () {
+    Route::post('/users/self', [\App\Http\Controllers\TelegramController::class, "getSelf"]);
+    
+    Route::group([
+        'prefix' => 'users',
+        'middleware' => ['tg.role:user']
+    ], function () {
+        Route::get('/', [\App\Http\Controllers\TelegramController::class, "index"]);
+        Route::get('/{user}', [\App\Http\Controllers\TelegramController::class, "show"]);
+    });
+});
 
-
-
+// AI Generation Route
+Route::post('/ai/generate', [\App\Http\Controllers\AIController::class, 'generate'])->name('ai.generate');

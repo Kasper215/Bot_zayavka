@@ -15,6 +15,9 @@ use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Telegram\Bot\FileUpload\InputFile;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Lead;
+use App\Notifications\NewLeadNotification;
+use Illuminate\Support\Facades\Notification;
 
 class TelegramController extends Controller
 {
@@ -288,7 +291,7 @@ class TelegramController extends Controller
     {
         $botUser = BotManager::bot()->currentBotUser();
         
-        // Разрешаем только администраторам (роль = 1) и менеджерам (роль = 2)
+        // Разрешаем только администраторам (роль = 2) и менеджерам (роль = 1)
         if (!$botUser->isAdmin() && !$botUser->isManager()) {
             BotManager::bot()->reply("У вас нет доступа к этому меню.");
             return;
@@ -330,8 +333,8 @@ class TelegramController extends Controller
                 return;
             }
 
-            $totalLeads = \App\Models\Lead::count();
-            $newLeads = \App\Models\Lead::where('status', 'new')->count();
+            $totalLeads = Lead::count();
+            $newLeads = Lead::where('status', 'new')->count();
             $totalUsers = User::count();
 
             $statsText = "📊 <b>Краткая статистика</b>\n\n" .
@@ -1061,7 +1064,7 @@ class TelegramController extends Controller
             }
 
             // Сохраняем лид в базу данных
-            \App\Models\Lead::create([
+            Lead::create([
                 'user_id' => $botUser->id,
                 'client_name' => $orderData['client_name'] ?? 'Не указано',
                 'service_type' => $orderData['service'] ?? 'Не указано',
@@ -1088,6 +1091,17 @@ class TelegramController extends Controller
                 env("TELEGRAM_ADMIN_CHANNEL"),
                 $adminText
             );
+
+            // Отправляем Push-уведомления админам и менеджерам
+            try {
+                $staff = User::whereIn('role', [1, 2])->get();
+                $leadRecord = Lead::where('user_id', $botUser->id)->orderBy('id', 'desc')->first();
+                if ($leadRecord) {
+                    Notification::send($staff, new NewLeadNotification($leadRecord));
+                }
+            } catch (\Exception $e) {
+                Log::error("Bot Push Notification Error: " . $e->getMessage());
+            }
 
             // Пересылаем сами файлы админу
             if (!empty($orderData['files_msg_ids'])) {

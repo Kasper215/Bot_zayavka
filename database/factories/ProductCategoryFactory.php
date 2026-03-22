@@ -3,27 +3,12 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
-use App\Models\ProductCategory;
 
+/**
+ * DEPRECATED: This factory belongs to the old project structure.
+ */
 class ProductCategoryFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
-    protected $model = ProductCategory::class;
-
-    /**
-     * Define the model's default state.
-     */
-    public function definition(): array
-    {
-        return [
-            'name' => fake()->name(),
-            'description' => fake()->text(),
-            'hasMany' => fake()->word(),
-        ];
-    }
+    protected $model = null;
+    public function definition(): array { return []; }
 }

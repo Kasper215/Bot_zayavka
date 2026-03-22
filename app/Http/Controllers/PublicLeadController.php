@@ -46,7 +46,7 @@ class PublicLeadController extends Controller
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $file) {
                     $originalName = $file->getClientOriginalName();
-                    $path = $file->storeAs("leads/{$lead->id}", $originalName, 'public');
+                    $path = $file->storeAs("leads/{$lead->id}", $originalName, 'local');
                     $uploadedFiles[] = [
                         'name' => $originalName,
                         'path' => $path,
@@ -57,27 +57,16 @@ class PublicLeadController extends Controller
             }
 
             try {
-                $tgMessage = "#новая_заявка_pwa\n✅ <b>Новая заявка с сайта!</b>\n\n" .
-                             "<b>ФИО:</b> {$validated['client_name']}\n" .
-                             "<b>Контакт:</b> {$validated['contacts']}\n" .
-                             "<b>Услуга:</b> {$validated['service_type']}\n" .
-                             "<b>Стадия/Расчет:</b>\n<i>{$summaryStage}</i>";
+                // --- ОТПРАВКА ПУШ-УВЕДОМЛЕНИЙ ---
+                // Рассылаем всем Менеджерам (1), Админам (2) и Kasper (3)
+                $staff = \App\Models\User::whereIn('role', [1, 2, 3])->get();
+                Log::info("Notifying staff: " . $staff->count() . " members found.");
+                \Illuminate\Support\Facades\Notification::send($staff, new \App\Notifications\NewLeadNotification($lead));
+                // ---------------------------------
 
-                if (!empty($validated['extra'])) {
-                    $tgMessage .= "\n\n<b>💬 О проекте:</b> {$validated['extra']}";
-                }
-
-                if (count($uploadedFiles) > 0) {
-                    $tgMessage .= "\n\n📎 <b>Прикреплено файлов: " . count($uploadedFiles) . "</b>";
-                }
-
-                BotMethods::bot()->sendMessage(
-                    env("TELEGRAM_ADMIN_CHANNEL"),
-                    $tgMessage
-                );
             } catch (\Exception $e) {
-                // Игнорируем ошибку телеграма
-                Log::error($e->getMessage());
+                // Игнорируем ошибку уведомлений
+                Log::error("Notification Error: " . $e->getMessage());
             }
 
             return response()->json([

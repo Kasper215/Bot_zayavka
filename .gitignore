@@ -5,10 +5,14 @@
 /storage/*.key
 /storage/app/public/leads/*
 /storage/app/public/videos/*
+/storage/app/leads/*
+/storage/push_config_*.json
+/storage/logs/*.log
 /vendor
 .env
 .env.backup
 .env.production
+.env.testing
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
     plugins: [
@@ -16,27 +17,21 @@ export default defineConfig({
                 },
             },
         }),
-        // VitePWA({
-        //     registerType: 'autoUpdate',
-        //     injectRegister: 'auto',
-        //     manifest: {
-        //         name: 'BioBook',
-        //         short_name: 'BioBook',
-        //         description: 'Система загрузки видео',
-        //         theme_color: '#4f46e5',
-        //         icons: [
-        //             {
-        //                 src: '/пнглого.png',
-        //                 sizes: '192x192',
-        //                 type: 'image/png'
-        //             },
-        //             {
-        //                 src: '/пнглого.png',
-        //                 sizes: '512x512',
-        //                 type: 'image/png'
-        //             }
-        //         ]
-        //     }
-        // })
+        VitePWA({
+            outDir: 'public',
+            buildBase: '/build/',
+            scope: '/',
+            registerType: 'autoUpdate',
+            injectRegister: null,
+            strategies: 'injectManifest',
+            srcDir: 'resources/js',
+            filename: 'sw.js',
+            manifest: false,
+            devOptions: {
+                enabled: true,
+                type: 'module',
+            }
+        })
     ],
 });
+
