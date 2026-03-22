@@ -6,7 +6,8 @@ import PriceCalculator from "@/Components/Users/Forms/PriceCalculator.vue";
 import AIBookStarter from "@/Components/Users/Forms/AIBookStarter.vue";
 
 const userStore = useUsersStore();
-const currentStep = ref('quiz'); // 'quiz' -> 'ai' -> 'calc' -> 'contacts' -> 'success'
+const currentStep = ref('start'); // 'start' -> 'quiz' -> 'ai' -> 'calc' -> 'contacts' -> 'success'
+const flowType = ref('full'); // 'full', 'editing', 'calc_only'
 
 const form = reactive({
     client_name: '',
@@ -17,6 +18,18 @@ const form = reactive({
     calc_data: '',
     calc_price: '',
 });
+
+const startFlow = (type) => {
+    flowType.value = type;
+    if (type === 'full') {
+        currentStep.value = 'quiz';
+    } else if (type === 'editing') {
+        form.service_type = 'Редактура текста';
+        currentStep.value = 'calc';
+    } else {
+        currentStep.value = 'calc';
+    }
+};
 
 const selectedFiles = ref([]);
 
@@ -41,7 +54,12 @@ const tg = window.Telegram?.WebApp || null;
 
 const applyQuizResult = (genre) => {
     form.service_type = genre;
-    currentStep.value = 'ai';
+    // Если жанр "Редактура" - прыгаем сразу к расчету
+    if (genre === 'Редактура текста') {
+        currentStep.value = 'calc';
+    } else {
+        currentStep.value = 'ai';
+    }
 };
 
 const handleAIBack = () => {
@@ -56,7 +74,13 @@ const handleAIAfter = (text) => {
 };
 
 const handleCalcBack = () => {
-    currentStep.value = 'ai';
+    if (flowType.value === 'editing' || flowType.value === 'calc_only') {
+        currentStep.value = 'start';
+    } else if (form.service_type === 'Редактура текста') {
+        currentStep.value = 'quiz';
+    } else {
+        currentStep.value = 'ai';
+    }
 };
 
 const applyCalc = (data) => {
@@ -68,7 +92,7 @@ const applyCalc = (data) => {
 };
 
 const isCompleted = (step) => {
-    const order = ['quiz', 'ai', 'calc', 'contacts', 'success'];
+    const order = ['start', 'quiz', 'ai', 'calc', 'contacts', 'success'];
     return order.indexOf(order.find(s => s === currentStep.value)) > order.indexOf(step);
 };
 
@@ -79,29 +103,28 @@ const submitForm = async () => {
 }
 
 const resetToStart = () => {
-    if (tg) {
-        tg.close();
-    } else {
-        // Reset form
-        Object.keys(form).forEach(key => form[key] = '');
-        selectedFiles.value = [];
-        currentStep.value = 'quiz';
-    }
+    // Reset form
+    Object.keys(form).forEach(key => form[key] = '');
+    selectedFiles.value = [];
+    currentStep.value = 'start';
+    flowType.value = 'full';
 };
 
-const steps = {
-    quiz: 'Жанр',
-    ai: 'Идея',
-    calc: 'Расчет',
-    contacts: 'Контакты'
-};
+const steps = computed(() => {
+    if (flowType.value === 'full') {
+        return { quiz: 'Жанр', ai: 'Идея', calc: 'Расчет', contacts: 'Контакты' };
+    } else if (flowType.value === 'editing') {
+        return { calc: 'Объем', contacts: 'Контакты' };
+    }
+    return { calc: 'Расчет', contacts: 'Контакты' };
+});
 </script>
 
 <template>
   <div class="lead-form-wrapper">
     <div class="form-card glass-panel shadow-2xl">
         <!-- Progress Steps -->
-        <div class="steps-indicator mb-6 d-flex justify-content-center gap-3">
+        <div v-if="currentStep !== 'start' && currentStep !== 'success'" class="steps-indicator mb-6 d-flex justify-content-center gap-3">
             <div 
                 v-for="(stepName, key) in steps" 
                 :key="key" 
@@ -111,10 +134,44 @@ const steps = {
          </div>
 
         <form @submit.prevent="submitForm">
+            <!-- Step 0: Выбор пути -->
+            <transition name="slide">
+                <div v-if="currentStep === 'start'" class="form-section transition-item">
+                    <h1 class="biobook-title text-center mb-2">BioBook</h1>
+                    <h2 class="section-title text-center mb-5">Как мы можем помочь вашему проекту?</h2>
+                    
+                    <div class="choice-grid">
+                        <button type="button" @click="startFlow('full')" class="choice-card">
+                            <span class="c-icon">✍️</span>
+                            <div class="c-info">
+                                <h3>Написать с нуля</h3>
+                                <p>Книги, мемуары, истории компаний</p>
+                            </div>
+                        </button>
+                        
+                        <button type="button" @click="startFlow('editing')" class="choice-card">
+                            <span class="c-icon">✍️</span>
+                            <div class="c-info">
+                                <h3>Редактура текста</h3>
+                                <p>У вас уже есть текст, нужен профи</p>
+                            </div>
+                        </button>
+
+                        <button type="button" @click="startFlow('calc_only')" class="choice-card">
+                            <span class="c-icon">📊</span>
+                            <div class="c-info">
+                                <h3>Быстрый расчет</h3>
+                                <p>Узнать стоимость вашего объема</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </transition>
+
             <!-- Step 1: Квиз по жанрам -->
             <transition name="slide">
                 <div v-if="currentStep === 'quiz'" class="form-section transition-item">
-                    <h1 class="biobook-title text-center mb-2">BioBook</h1>
+                    <button type="button" @click="currentStep = 'start'" class="back-link mb-3">← К началу</button>
                     <h2 class="section-title text-center mb-4">Выберите жанр вашей будущей книги</h2>
                     <BookQuiz @select="applyQuizResult" />
                 </div>
@@ -368,6 +425,69 @@ const steps = {
     .biobook-title {
         font-size: 2.8rem;
     }
+}
+
+.choice-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.choice-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    width: 100%;
+}
+
+.choice-card:hover {
+    background: rgba(96, 165, 250, 0.08);
+    border-color: #60a5fa;
+    transform: translateY(-3px) scale(1.02);
+}
+
+.c-icon {
+    font-size: 2.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+}
+
+.c-info h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #fff;
+    font-weight: 700;
+}
+
+.c-info p {
+    margin: 2px 0 0 0;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.back-link {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.back-link:hover {
+    color: #60a5fa;
 }
 
 .file-upload-section {

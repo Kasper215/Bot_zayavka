@@ -1,44 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue';
 import BookLeadForm from "@/Components/Users/Forms/BookLeadForm.vue";
-import PriceCalculator from "@/Components/Users/Forms/PriceCalculator.vue";
-import AIBookStarter from "@/Components/Users/Forms/AIBookStarter.vue";
-
-const activeTab = ref('form');
 </script>
 
 <template>
     <div class="menu-component">
-        <div class="tabs-navigation mb-4 px-3">
-            <div class="tabs-glass">
-                <button 
-                    @click="activeTab = 'form'" 
-                    class="tab-btn" 
-                    :class="{ active: activeTab === 'form' }"
-                >
-                    <span class="t-icon">📝</span>
-                    <span class="t-text">Заявка</span>
-                </button>
-                <button 
-                    @click="activeTab = 'calc'" 
-                    class="tab-btn" 
-                    :class="{ active: activeTab === 'calc' }"
-                >
-                    <span class="t-icon">📊</span>
-                    <span class="t-text">Калькулятор</span>
-                </button>
-            </div>
-        </div>
-
         <div class="tab-content">
-            <transition name="fade" mode="out-in">
-                <div v-if="activeTab === 'form'" key="form">
-                    <BookLeadForm />
-                </div>
-                <div v-else-if="activeTab === 'calc'" key="calc" class="standalone-container px-3">
-                    <PriceCalculator @apply="activeTab = 'form'" />
-                </div>
-            </transition>
+            <BookLeadForm />
         </div>
     </div>
 </template>
