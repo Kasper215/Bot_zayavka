@@ -15,11 +15,20 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export NODE_OPTIONS="--max-old-space-size=512"
+            git config --global --add safe.directory /var/www/Bot_zayavka
             cd /var/www/Bot_zayavka
             git pull origin main
+            
+            # Перезапустим MySQL на случай если он упал от нехватки памяти
+            service mysql restart || true
+            
+            export COMPOSER_ALLOW_SUPERUSER=1
             composer install --no-dev --optimize-autoloader
+            
             npm install
             npm run build
+            
             php artisan migrate --force
             php artisan optimize:clear
             php artisan optimize
