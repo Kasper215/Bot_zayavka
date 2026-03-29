@@ -1,0 +1,26 @@
+name: Deploy Laravel Project
+
+on:
+  push:
+    branches: [ main ] # Если твоя ветка в Git называется master, замени main на master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/Bot_zayavka
+            git pull origin main
+            composer install --no-dev --optimize-autoloader
+            npm install
+            npm run build
+            php artisan migrate --force
+            php artisan optimize:clear
+            php artisan optimize
+            chown -R www-data:www-data /var/www/Bot_zayavka
