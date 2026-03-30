@@ -13,41 +13,48 @@
   "icons": [
     {
       "src": "/pwa-icon.png",
-      "sizes": "640x640",
-      "type": "image/jpeg",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/pwa-icon.png",
-      "sizes": "640x640",
-      "type": "image/jpeg",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
+  "categories": ["business", "office", "utilities"],
   "shortcuts": [
     {
       "name": "Новая заявка",
       "url": "/?action=new_lead",
-      "icons": [{ "src": "/pwa-icon.png", "sizes": "640x640" }]
+      "icons": [{ "src": "/pwa-icon.png", "sizes": "192x192" }]
     },
     {
       "name": "Мои заявки",
       "url": "/leads",
-      "icons": [{ "src": "/pwa-icon.png", "sizes": "640x640" }]
+      "icons": [{ "src": "/pwa-icon.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
     {
       "src": "/pwa-icon.png",
       "sizes": "640x640",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "wide",
       "label": "BioBook Dashboard"
     },
     {
       "src": "/pwa-icon.png",
       "sizes": "640x640",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "narrow",
       "label": "BioBook Mobile"
     }
