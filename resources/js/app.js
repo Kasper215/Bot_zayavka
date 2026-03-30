@@ -26,37 +26,49 @@ window.onerror = function (msg, url, line) {
     return false;
 };
 
-// PWA Registration
+// PWA Registration with enhanced debugging
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
+        console.log('PWA: Attempting to register /sw.js...');
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(reg => {
-                console.log('PWA: Registered with scope /', reg.scope);
-                // Listen for updates
+                console.log('PWA: ✅ Registered successfully. Scope:', reg.scope);
+                // Notification status check
+                if ('Notification' in window) {
+                    console.log('PWA: Notification permission status:', Notification.permission);
+                }
+
                 reg.onupdatefound = () => {
                     const installingWorker = reg.installing;
+                    console.log('PWA: 🔄 Update found, installing...');
                     installingWorker.onstatechange = () => {
                         if (installingWorker.state === 'installed') {
                             if (navigator.serviceWorker.controller) {
-                                console.log('PWA: New content available, will be used on next reload');
+                                console.log('PWA: ✨ New content available! Please refresh.');
                             } else {
-                                console.log('PWA: Content cached for offline use');
+                                console.log('PWA: 📁 Content cached for offline use.');
                             }
                         }
                     };
                 };
             })
             .catch(error => {
-                console.error('PWA: Registration failed:', error);
+                console.error('PWA: ❌ Registration failed:', error);
             });
     });
+} else {
+    console.warn('PWA: Service Workers are not supported in this browser or over HTTP.');
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
-    // e.preventDefault();
-    console.log('PWA: beforeinstallprompt triggered');
+    // This event fires when the browser thinks the app is installable
+    console.log('PWA: 📥 beforeinstallprompt triggered! The app can be installed.');
     window.deferredPrompt = e;
+});
+
+window.addEventListener('appinstalled', () => {
+    console.log('PWA: 🎉 Application was successfully installed!');
+    window.deferredPrompt = null;
 });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
