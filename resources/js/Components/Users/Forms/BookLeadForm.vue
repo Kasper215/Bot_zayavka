@@ -371,36 +371,42 @@ onMounted(() => {
         </div>
 
         <!-- Success Screen -->
-        <div v-else class="success-screen-lux py-5">
+        <div v-else class="success-screen-lux py-1">
             <div class="success-content text-center glass-panel p-5 overflow-hidden">
-                <div class="success-particles"></div>
-                <div class="success-animation-lux mb-4">
-                    <svg class="checkmark-lux" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                        <circle class="checkmark__circle-lux" cx="26" cy="26" r="25" fill="none"/>
-                        <path class="checkmark__check-lux" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                    </svg>
+                <!-- Celebration Particles -->
+                <div class="confetti-container">
+                    <div v-for="i in 20" :key="i" class="confetti-piece" :style="`--d: ${i*18}deg; --delay: ${i*0.1}s; --color: ${i % 2 === 0 ? '#60a5fa' : '#a855f7'}`"></div>
                 </div>
-                <h1 class="lux-title mb-3">Заявка принята!</h1>
-                <p class="lux-p opacity-80 mb-5">Ваш личный менеджер изучит материалы и свяжется с вами в ближайшее время для уточнения деталей.</p>
+
+                <div class="success-animation-lux mb-4">
+                    <div class="checkmark-wrapper">
+                        <svg class="checkmark-lux" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                            <circle class="checkmark__circle-lux" cx="26" cy="26" r="25" fill="none"/>
+                            <path class="checkmark__check-lux" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                        </svg>
+                    </div>
+                </div>
+                <h1 class="lux-title mb-3">Заявка принята! ✅</h1>
+                <p class="lux-p opacity-80 mb-5 text-indigo-100">Ваша история уже в надежных руках. <br> Скоро мы свяжемся с вами!</p>
                 
                 <div class="summary-box-lux mx-auto">
                     <div class="sb-item">
-                        <span class="sb-label">Услуга:</span>
-                        <span class="sb-value">{{ form.service_type }}</span>
+                        <span class="sb-label">Жанр:</span>
+                        <span class="sb-value text-indigo-400 fw-bold">{{ form.service_type }}</span>
                     </div>
                     <div class="sb-item" v-if="form.calc_price">
-                        <span class="sb-label">Предв. оценка:</span>
-                        <span class="sb-value highlight">{{ form.calc_price }}</span>
+                        <span class="sb-label">Расчетная стоимость:</span>
+                        <span class="sb-value highlight aura">{{ form.calc_price }}</span>
                     </div>
                     <div class="sb-divider"></div>
                     <div class="sb-item pb-0">
-                        <span class="sb-label">Номер заказа:</span>
-                        <span class="sb-value fw-bold">#{{ form.lead_id || '...' }}</span>
+                        <span class="sb-label">ID Заявки:</span>
+                        <span class="sb-value fw-bold text-white/50">#{{ form.lead_id || 'PRO_BOOK' }}</span>
                     </div>
                 </div>
 
                 <button @click="resetToStart" class="lux-back-btn mt-5">
-                    Вернуться на главную 🏠
+                    Вернуться к началу 🏠
                 </button>
             </div>
         </div>
