@@ -1,8 +1,9 @@
 {
   "name": "BioBook",
   "short_name": "BioBook",
+  "id": "/",
   "description": "Система оформления заявок на книги",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",

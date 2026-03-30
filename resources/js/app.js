@@ -88,17 +88,14 @@ window.addEventListener('load', async () => {
 
 // ─── PWA Infrastructure ───────────────────────────────────────────────────────
 
-
 let deferredPrompt = null;
-let swRegistration = null;
 
 // 1) Service Worker Registration
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(reg => {
-                swRegistration = reg;
-                console.log('PWA: ✅ SW Registered, scope:', reg.scope);
+                console.log('PWA: ✅ SW Registered');
             })
             .catch(err => {
                 console.error('PWA: ❌ SW Registration failed:', err);
@@ -106,28 +103,23 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// 2) Capture install prompt — do NOT call e.preventDefault() so Chrome can
-//    still show its native install button in the address bar as fallback.
-//    We store the event to call it later from our button.
+// 2) Capture install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); // prevent auto-showing native mini-infobar
+    e.preventDefault();
     deferredPrompt = e;
-    console.log('PWA: 📥 beforeinstallprompt fired — site is installable!');
+    console.log('PWA: 📥 Install prompt captured');
     showInstallOverlay();
 });
 
-// 3) If beforeinstallprompt never fires within 4s, show push-only overlay
+// 3) Timeout for manual instruction if prompt is blocked (common in Russia)
 setTimeout(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
         || window.navigator.standalone === true;
 
-    if (!deferredPrompt && !isStandalone && !document.getElementById('pwa-install-overlay')) {
-        console.warn('PWA: ⚠️ beforeinstallprompt did NOT fire. Showing push-only overlay.');
-        showPushOnlyOverlay();
+    if (!isStandalone && !document.getElementById('pwa-install-overlay')) {
+        showInstallOverlay();
     }
-}, 4000);
-
-// ─── Install Overlay (when beforeinstallprompt DID fire) ──────────────────────
+}, 3000);
 
 function showInstallOverlay() {
     if (document.getElementById('pwa-install-overlay')) return;
@@ -136,82 +128,50 @@ function showInstallOverlay() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
         || window.navigator.standalone === true;
 
-    let subtext = 'Установите для мгновенных пуш-уведомлений';
-    if (isIOS && !isStandalone) {
-        subtext = 'Нажмите <strong>"Поделиться"</strong> и <strong>"На экран Домой"</strong> 📲';
+    if (isStandalone) return;
+
+    let subtext = 'Нажмите <strong>"Установить"</strong> для работы без браузера';
+    let showManual = !deferredPrompt;
+
+    if (isIOS) {
+        subtext = 'Нажмите кнопку <strong>"Поделиться"</strong> и затем <strong>"На экран Домой"</strong> 📲';
+    } else if (showManual) {
+        subtext = 'Нажмите на три точки (меню) и выберите <strong>"Установить приложение"</strong> или <strong>"На главный экран"</strong>';
     }
 
     const overlay = document.createElement('div');
     overlay.id = 'pwa-install-overlay';
     overlay.innerHTML = `
-        <div class="pwa-content">
-            <div class="pwa-icon">✨</div>
-            <div class="pwa-text">
-                <strong>BioBook</strong>
-                <span>${subtext}</span>
+        <div class="pwa-content" style="background: #111827; border: 1px solid #374151; color: white; border-radius: 16px; padding: 15px; position: fixed; bottom: 85px; left: 10px; right: 10px; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; font-family: sans-serif;">
+            <div class="pwa-icon" style="font-size: 24px;">✨</div>
+            <div class="pwa-text" style="flex: 1; display: flex; flex-direction: column; font-size: 14px;">
+                <strong style="margin-bottom: 2px;">BioBook (App)</strong>
+                <span style="opacity: 0.8; font-size: 12px;">${subtext}</span>
             </div>
-            ${(isIOS && !isStandalone) ? '' : '<button id="pwa-install-btn">УСТАНОВИТЬ</button>'}
-            <button id="pwa-close-btn">✕</button>
+            ${(!isIOS && deferredPrompt) ? '<button id="pwa-install-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">УСТАНОВИТЬ</button>' : ''}
+            <button id="pwa-close-btn" style="background: none; border: none; color: white; opacity: 0.5; font-size: 18px; padding: 5px; cursor: pointer;">✕</button>
         </div>
     `;
     document.body.appendChild(overlay);
 
     const installBtn = document.getElementById('pwa-install-btn');
-    if (installBtn) {
+    if (installBtn && deferredPrompt) {
         installBtn.onclick = async () => {
-            if (!deferredPrompt) {
-                console.warn('PWA: deferredPrompt gone');
-                return;
-            }
-            // Call prompt() SYNCHRONOUSLY in the user gesture handler
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             deferredPrompt = null;
-            console.log('PWA: Install outcome:', outcome);
-
-            if (outcome === 'accepted') {
-                overlay.remove();
-                // Request push AFTER install
-                setTimeout(() => window.pwa?.registerPush(), 1000);
-            }
+            if (outcome === 'accepted') overlay.remove();
         };
     }
 
     document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
 }
 
-// ─── Push-only Overlay (when beforeinstallprompt did NOT fire) ────────────────
-
-function showPushOnlyOverlay() {
-    if (document.getElementById('pwa-install-overlay')) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'pwa-install-overlay';
-    overlay.innerHTML = `
-        <div class="pwa-content">
-            <div class="pwa-icon">🔔</div>
-            <div class="pwa-text">
-                <strong>BioBook</strong>
-                <span>Включите уведомления, чтобы не пропускать новости</span>
-            </div>
-            <button id="pwa-push-btn">ВКЛЮЧИТЬ</button>
-            <button id="pwa-close-btn">✕</button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-
-    document.getElementById('pwa-push-btn').onclick = () => {
-        window.pwa?.registerPush();
-        overlay.remove();
-    };
-    document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
-}
-
-// ─── App Installed Event ──────────────────────────────────────────────────────
-
 window.addEventListener('appinstalled', () => {
-    console.log('PWA: 🎉 App installed as WebAPK!');
+    console.log('PWA: 🎉 App installed!');
     deferredPrompt = null;
+    const overlay = document.getElementById('pwa-install-overlay');
+    if (overlay) overlay.remove();
 });
 
 // ─── Inertia App ─────────────────────────────────────────────────────────────

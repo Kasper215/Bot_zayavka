@@ -5,20 +5,28 @@ import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 // Кеширование ассетов (CSS, JS, изображения)
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Явный fetch handler для NavigationRoute — ОБЯЗАТЕЛЕН для WebAPK на Android
+// Кеширование главной страницы (Laravel Route)
 registerRoute(
     ({ request }) => request.mode === 'navigate',
     new NetworkFirst({
         cacheName: 'pages-cache',
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 5, // Give the network enough time but fallback to cache if slow
     })
 );
 
-// Кеширование статических файлов
+// Кеширование статики
 registerRoute(
-    ({ request }) => ['style', 'script', 'worker'].includes(request.destination),
+    ({ request }) => request.destination === 'style' || request.destination === 'script' || request.destination === 'worker',
     new CacheFirst({
         cacheName: 'static-resources',
+    })
+);
+
+// Кеширование медиа
+registerRoute(
+    ({ request }) => request.destination === 'image',
+    new CacheFirst({
+        cacheName: 'image-cache',
     })
 );
 
