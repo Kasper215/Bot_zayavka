@@ -17,11 +17,12 @@ class BroadcastController extends Controller
             abort(403, 'Доступ запрещен');
         }
 
-        // Считаем именно тех, у кого есть активные push-подписки
+        // Считаем всех: и пользователей, и гостей-подписчиков
         $userCount = User::has('pushSubscriptions')->count();
+        $guestCount = \App\Models\GuestSubscriber::has('pushSubscriptions')->count();
         
         return Inertia::render('Admin/Broadcast', [
-            'pushSubscribersCount' => $userCount
+            'pushSubscribersCount' => $userCount + $guestCount
         ]);
     }
 
@@ -41,17 +42,26 @@ class BroadcastController extends Controller
         $message = $request->input('message');
         $url = $request->input('url', route('home'));
 
-        // Находим всех пользователей с подписками
+        // Находим всех пользователей и гостей с подписками
         $users = User::has('pushSubscriptions')->get();
+        $guests = \App\Models\GuestSubscriber::has('pushSubscriptions')->get();
         
-        if ($users->isEmpty()) {
+        $totalCount = $users->count() + $guests->count();
+
+        if ($totalCount === 0) {
             return back()->with('error', 'Нет активных подписчиков для рассылки.');
         }
 
+        $notification = new GeneralBroadcastNotification($title, $message, $url);
+
         foreach ($users as $user) {
-            $user->notify(new GeneralBroadcastNotification($title, $message, $url));
+            $user->notify($notification);
         }
 
-        return back()->with('success', "Рассылка запущена! Уведомления отправляются {$users->count()} пользователям.");
+        foreach ($guests as $guest) {
+            $guest->notify($notification);
+        }
+
+        return back()->with('success', "Рассылка запущена! Уведомления отправляются {$totalCount} пользователям.");
     }
 }

@@ -27,6 +27,9 @@ Route::post('/leads/submit', [\App\Http\Controllers\PublicLeadController::class,
 // Auth Routes (Login)
 require __DIR__.'/auth.php';
 
+// Public PWA & Push Routes
+Route::post('/notifications/subscribe', [\App\Http\Controllers\PublicNotificationController::class, 'subscribe'])->name('notifications.subscribe');
+
 // Admin Routes (Auth + Role Manager/Admin)
 Route::group([
     'prefix' => 'admin',
@@ -41,9 +44,6 @@ Route::group([
     Route::get('/dashboard', function () {
         return redirect()->route('admin.leads.index');
     })->name('dashboard');
-
-    // Subscription route for push
-    Route::post('/notifications/subscribe', [\App\Http\Controllers\Admin\UserController::class, 'subscribeNotifications'])->name('notifications.subscribe');
 
     // Leads Management
     Route::group([
