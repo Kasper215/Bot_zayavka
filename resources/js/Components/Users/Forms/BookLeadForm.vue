@@ -917,6 +917,10 @@ onMounted(() => {
     animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+@keyframes stroke {
+    100% { stroke-dashoffset: 0; }
+}
+
 @keyframes scale-up { 
     0% { transform: scale(0.5); opacity: 0; } 
     100% { transform: scale(1); opacity: 1; } 
@@ -924,15 +928,15 @@ onMounted(() => {
 
 .checkmark__circle-lux {
     stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 3; stroke-miterlimit: 10;
-    stroke: rgba(255,255,255,0.4); fill: none; animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    stroke: rgba(255,255,255,0.4); fill: none; 
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
 .checkmark__check-lux {
     transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48;
-    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+    stroke: #fff; stroke-width: 5;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
 }
-
-@keyframes fill-lux { 100% { box-shadow: inset 0px 0px 0px 50px #60a5fa; } }
 
 @media (max-width: 768px) {
     .biobook-title { font-size: 3rem; }
