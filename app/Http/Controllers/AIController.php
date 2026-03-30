@@ -15,7 +15,7 @@ class AIController extends Controller
             'style' => 'required|string|in:dramatic,lyrical,business,mystery'
         ]);
 
-        $apiKey = env('OPENROUTER_API_KEY');
+        $apiKey = config('services.openrouter.api_key');
         if (!$apiKey) {
             return response()->json(['message' => 'AI Service not configured'], 500);
         }
