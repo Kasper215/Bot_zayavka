@@ -12,45 +12,22 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/pwa-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png",
-      "sizes": "512x512",
+      "src": "/pwa-icon.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "categories": ["business", "office", "utilities"],
-  "shortcuts": [
-    {
-      "name": "Новая заявка",
-      "url": "/?action=new_lead",
-      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
-    },
-    {
-      "name": "Мои заявки",
-      "url": "/leads",
-      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "BioBook Dashboard"
-    },
-    {
-      "src": "/logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "BioBook Mobile"
     }
   ]
 }
