@@ -35,5 +35,8 @@ return [
         'client_secret' => env('YANDEX_CLIENT_SECRET'),
         'redirect' => env('YANDEX_REDIRECT_URI'),
     ],
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+    ],
 
 ];
