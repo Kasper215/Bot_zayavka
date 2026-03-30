@@ -18,7 +18,8 @@ jobs:
             export NODE_OPTIONS="--max-old-space-size=512"
             git config --global --add safe.directory /var/www/Bot_zayavka
             cd /var/www/Bot_zayavka
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             composer install --no-dev --optimize-autoloader
             npm install
             npm run build
