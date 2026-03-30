@@ -74,18 +74,25 @@ function showInstallOverlay() {
     
     if (document.getElementById('pwa-install-btn')) {
         document.getElementById('pwa-install-btn').onclick = async () => {
-            // Attempt push registration in background
-            if (window.pwa) window.pwa.registerPush();
-
+            // ВАЖНО: prompt() должен идти ПЕРВЫМ — до любых async операций
+            // иначе Chrome теряет контекст пользовательского жеста и игнорирует запрос
             if (!deferredPrompt) {
-                // If no prompt, maybe it's already installed or not supported
-                console.log('PWA: No prompt available');
+                console.log('PWA: No install prompt — requesting push only');
+                if (window.pwa) window.pwa.registerPush();
                 return;
             }
+
+            // 1) Показываем системный диалог установки синхронно
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') overlay.remove();
             deferredPrompt = null;
+
+            if (outcome === 'accepted') {
+                console.log('PWA: ✅ App installed');
+                overlay.remove();
+                // 2) После установки запрашиваем push-разрешение
+                if (window.pwa) window.pwa.registerPush();
+            }
         };
     }
     
