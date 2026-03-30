@@ -2,6 +2,36 @@
 import {Head} from '@inertiajs/vue3'
 import GlobalAlert from "@/Components/GlobalAlert.vue";
 import GlobalConfirmModal from "@/Components/GlobalConfirmModal.vue";
+import { onMounted, ref } from 'vue';
+
+const isStandalone = ref(false);
+const showInstallButton = ref(false);
+
+onMounted(() => {
+    // Check if app is already installed/running in standalone
+    isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    // Listen for custom event from app.js
+    window.addEventListener('pwa-prompt-available', () => {
+        if (!isStandalone.value) {
+            showInstallButton.value = true;
+        }
+    });
+
+    // Also check if prompt was already captured before mount
+    if (window.pwa?.installPrompt && !isStandalone.value) {
+        showInstallButton.value = true;
+    }
+});
+
+const installPwa = async () => {
+    if (window.pwa) {
+        const result = await window.pwa.install();
+        if (result === 'accepted') {
+            showInstallButton.value = false;
+        }
+    }
+};
 </script>
 
 <template>
@@ -24,6 +54,10 @@ import GlobalConfirmModal from "@/Components/GlobalConfirmModal.vue";
             <button @click="scrollTop" class="nav-item">
                 <span class="nav-icon">▲</span>
                 <span class="nav-label">Наверх</span>
+            </button>
+            <button v-if="showInstallButton" @click="installPwa" class="nav-item install-btn">
+                <span class="nav-icon animate-bounce">📲</span>
+                <span class="nav-label">Скачать</span>
             </button>
             <button v-if="showNotificationButton" @click="requestPushPermission" class="nav-item notify-btn">
                 <span class="nav-icon animate-pulse">🔔</span>
@@ -51,6 +85,7 @@ html, body {
 
 .app-container {
     min-height: 100vh;
+    padding-top: env(safe-area-inset-top);
     padding-bottom: 80px; 
 }
 </style>
@@ -122,13 +157,26 @@ html, body {
     color: #fbbf24;
 }
 
+.install-btn {
+    color: #10b981;
+}
+
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.15); opacity: 0.8; }
 }
 
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
 .animate-pulse {
     animation: pulse 2s infinite ease-in-out;
+}
+
+.animate-bounce {
+    animation: bounce 1.5s infinite ease-in-out;
 }
 </style>
 
@@ -164,3 +212,4 @@ export default {
     }
 }
 </script>
+

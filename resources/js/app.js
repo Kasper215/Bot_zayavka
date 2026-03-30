@@ -88,6 +88,11 @@ window.addEventListener('load', async () => {
 
 // ─── PWA Infrastructure ───────────────────────────────────────────────────────
 
+window.pwa = {
+    installPrompt: null,
+    registerPush: null, // Will be set inside Inertia setup
+};
+
 let deferredPrompt = null;
 
 // 1) Service Worker Registration
@@ -105,99 +110,22 @@ if ('serviceWorker' in navigator) {
 
 // 2) Capture install prompt
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
+    // We DON'T call preventDefault() here so the browser's own "Install" bar appears.
+    // But we store the event so we can trigger it manually if needed.
     deferredPrompt = e;
-    console.log('PWA: 📥 Install prompt captured');
-    showInstallOverlay();
+    window.pwa.installPrompt = e;
+    console.log('PWA: 📥 Install prompt available');
+    window.dispatchEvent(new CustomEvent('pwa-prompt-available'));
 });
 
-// 3) Timeout for manual instruction if prompt is blocked (common in Russia)
-setTimeout(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-
-    if (!isStandalone && !document.getElementById('pwa-install-overlay')) {
-        showInstallOverlay();
-    }
-}, 3000);
-
-function showInstallOverlay() {
-    if (document.getElementById('pwa-install-overlay')) return;
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-
-    if (isStandalone) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'pwa-install-overlay';
-    overlay.style = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: flex-end; padding: 24px; font-family: system-ui, -apple-system, sans-serif;';
-    
-    overlay.innerHTML = `
-        <div style="background: #111827; width: 100%; border-radius: 28px; padding: 32px 24px; color: white; box-shadow: 0 -10px 50px rgba(0,0,0,0.6); position: relative; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
-            <button id="pwa-close-btn" style="position: absolute; top: 20px; right: 20px; background: #374151; border: none; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;">✕</button>
-            
-            <div style="text-align: center; margin-bottom: 28px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);">✨</div>
-                <h3 style="margin: 0 0 10px; font-size: 22px; font-weight: 700;">Установить BioBook</h3>
-                <p style="margin: 0; opacity: 0.8; font-size: 15px; line-height: 1.5; padding: 0 20px;">Лучший опыт работы: мгновенные пуши, работа в фоне и без VPN</p>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                ${isIOS ? `
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
-                        <p style="margin: 0; font-size: 14px; line-height: 1.6;">
-                            Нажмите <span style="background: #3b82f6; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Поделиться</span><br>
-                            затем <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 6px; font-weight: 600;">На экран Домой</span>
-                        </p>
-                    </div>
-                ` : `
-                    <a href="/downloads/biobook.apk" style="background: #3b82f6; color: white; text-decoration: none; padding: 18px; border-radius: 18px; font-weight: 700; font-size: 16px; text-align: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: transform 0.2s;">
-                        📦 Скачать APK (Рекомендуется)
-                    </a>
-                    
-                    <div style="display: flex; align-items: center; gap: 15px; margin: 5px 0;">
-                        <hr style="flex: 1; opacity: 0.2;"> <span style="font-size: 12px; opacity: 0.5;">ИЛИ</span> <hr style="flex: 1; opacity: 0.2;">
-                    </div>
-
-                    <button id="pwa-install-btn" style="background: transparent; border: 1.5px solid #374151; color: white; padding: 14px; border-radius: 18px; font-weight: 600; font-size: 14px; cursor: pointer;">
-                        Браузерная установка
-                    </button>
-                `}
-            </div>
-            
-            <style>
-                @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-            </style>
-        </div>
-    `;
-    
-    document.body.appendChild(overlay);
-
-    const installBtn = document.getElementById('pwa-install-btn');
-    if (installBtn && deferredPrompt) {
-        installBtn.onclick = async () => {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            if (outcome === 'accepted') overlay.remove();
-        };
-    } else if (installBtn) {
-        installBtn.onclick = () => {
-            alert('Для этой установки нажмите три точки в меню браузера и выберите "Добавить на главный экран"');
-        };
-    }
-
-    document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
-}
 
 window.addEventListener('appinstalled', () => {
     console.log('PWA: 🎉 App installed!');
     deferredPrompt = null;
-    const overlay = document.getElementById('pwa-install-overlay');
-    if (overlay) overlay.remove();
+    window.pwa.installPrompt = null;
 });
+
+
 
 // ─── Inertia App ─────────────────────────────────────────────────────────────
 
@@ -214,8 +142,17 @@ createInertiaApp({
         app.component('FontAwesomeIcon', FontAwesomeIcon)
         app.config.globalProperties.$notify = useAlertStore()
 
-        // Global push subscription helper
-        window.pwa = {
+        // Global PWA helpers
+        Object.assign(window.pwa, {
+            install: async function() {
+                if (this.installPrompt) {
+                    this.installPrompt.prompt();
+                    const { outcome } = await this.installPrompt.userChoice;
+                    this.installPrompt = null;
+                    return outcome;
+                }
+                return null;
+            },
             registerPush: async (vapidKey) => {
                 try {
                     const key = vapidKey || props?.initialPage?.props?.vapid_public_key;
@@ -271,7 +208,7 @@ createInertiaApp({
                 }
                 return outputArray;
             }
-        };
+        });
 
         // Auto-request push on first click (works even without WebAPK)
         const autoSub = () => {
@@ -282,34 +219,8 @@ createInertiaApp({
         window.addEventListener('click', autoSub);
         window.addEventListener('touchstart', autoSub);
 
-        // ───── APK Update Checker ────────────────────────────────────────────────────
+        // ───── PWA Initialization Complete ───────────────────────────────────────────
 
-async function checkApkUpdate() {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-
-    if (!isStandalone) return;
-
-    try {
-        const response = await fetch('/version.json?t=' + Date.now());
-        const remote = await response.json();
-        const localVersion = localStorage.getItem('biobook_apk_version') || '1.0.0';
-
-        if (remote.version !== localVersion) {
-            if (confirm(`Доступно обновление приложения (${remote.version}). Скачать новую версию?`)) {
-                localStorage.setItem('biobook_apk_version', remote.version);
-                window.location.href = remote.url;
-            }
-        }
-    } catch (e) {
-        // Silent fail
-    }
-}
-
-// Проверяем обновления при загрузке
-window.addEventListener('load', () => {
-    setTimeout(checkApkUpdate, 5000);
-});
 
 return app
             .use(plugin)

@@ -1,15 +1,17 @@
 {
   "name": "BioBook",
   "short_name": "BioBook",
-  "id": "/",
+  "id": "ru.biobook.pwa",
   "description": "Система оформления заявок на книги",
   "start_url": "/?source=pwa",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "lang": "ru",
   "scope": "/",
   "orientation": "portrait",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/launchericon-192x192.png",
@@ -36,6 +38,20 @@
       "purpose": "maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Список заявок",
+      "short_name": "Заявки",
+      "url": "/admin/leads",
+      "icons": [{ "src": "/launchericon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Рассылка",
+      "short_name": "Рассылка",
+      "url": "/admin/broadcast",
+      "icons": [{ "src": "/launchericon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
   "screenshots": [
     {
       "src": "/SplashScreen.scale-400.png",
@@ -53,3 +69,5 @@
     }
   ]
 }
+
+
