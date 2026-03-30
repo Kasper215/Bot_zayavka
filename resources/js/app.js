@@ -34,16 +34,6 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(reg => {
                 console.log('PWA: ✅ Registered');
-                // Auto-request for notifications on first interaction
-                const requestPushPrompt = () => {
-                   if ('Notification' in window && Notification.permission === 'default') {
-                       Notification.requestPermission().then(permission => {
-                           console.log('PWA: Notification permission', permission);
-                       });
-                   }
-                   window.removeEventListener('click', requestPushPrompt);
-                };
-                window.addEventListener('click', requestPushPrompt);
             });
     });
 }
@@ -59,6 +49,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function showInstallOverlay() {
     if (document.getElementById('pwa-install-overlay')) return;
     
+    const permission = 'Notification' in window ? Notification.permission : 'not-supported';
+    let subtext = 'Установите для мгновенных пуш-уведомлений';
+    if (permission === 'denied') subtext = '🔴 Пожалуйста, разрешите уведомления в настройках';
+    
     const overlay = document.createElement('div');
     overlay.id = 'pwa-install-overlay';
     overlay.innerHTML = `
@@ -66,7 +60,7 @@ function showInstallOverlay() {
             <div class="pwa-icon">✨</div>
             <div class="pwa-text">
                 <strong>BioBook</strong>
-                <span>Установите для лучшего пользования</span>
+                <span>${subtext}</span>
             </div>
             <button id="pwa-install-btn">УСТАНОВИТЬ</button>
             <button id="pwa-close-btn">✕</button>
@@ -74,16 +68,15 @@ function showInstallOverlay() {
     `;
     document.body.appendChild(overlay);
     
-    document.getElementById('pwa-install-btn').onclick = () => {
+    document.getElementById('pwa-install-btn').onclick = async () => {
+        // Trigger notification request along with install
+        if (window.pwa) await window.pwa.registerPush();
+
         if (!deferredPrompt) return;
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('PWA: User accepted');
-                overlay.remove();
-            }
-            deferredPrompt = null;
-        });
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') overlay.remove();
+        deferredPrompt = null;
     };
     
     document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
@@ -106,6 +99,54 @@ createInertiaApp({
         app.use(createPinia())
         app.component('FontAwesomeIcon', FontAwesomeIcon)
         app.config.globalProperties.$notify = useAlertStore()
+
+        // Define a global subscription helper
+        window.pwa = {
+            registerPush: async (vapidKey) => {
+                try {
+                    const key = vapidKey || props?.initialPage?.props?.vapid_public_key;
+                    if (!key || !('serviceWorker' in navigator)) return;
+                    
+                    const registration = await navigator.serviceWorker.ready;
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') return;
+
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: window.pwa.urlBase64ToUint8Array(key)
+                    });
+
+                    await fetch('/notifications/subscribe', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': props.initialPage.props.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content
+                        },
+                        body: JSON.stringify(subscription)
+                    });
+                    console.log('PWA: ✅ Subscribed');
+                } catch (e) {
+                    console.error('PWA: ❌ Subscribe failed', e);
+                }
+            },
+            urlBase64ToUint8Array: (base64String) => {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+        };
+
+        // Auto-subscribe on first click
+        const autoSub = () => {
+             window.pwa.registerPush();
+             window.removeEventListener('click', autoSub);
+        };
+        window.addEventListener('click', autoSub);
 
         return app
             .use(plugin)

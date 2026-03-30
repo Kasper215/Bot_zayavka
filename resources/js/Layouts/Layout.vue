@@ -126,53 +126,10 @@ export default {
     },
     mounted() {
         this.userStore.fetchPublicSelf();
-        
-        // Автоматическая подписка на пуши при взаимодействии
-        const registerOnInteraction = () => {
-            this.registerPush();
-            window.removeEventListener('click', registerOnInteraction);
-            window.removeEventListener('touchstart', registerOnInteraction);
-        };
-        
-        window.addEventListener('click', registerOnInteraction);
-        window.addEventListener('touchstart', registerOnInteraction);
     },
     methods: {
         scrollTop() {
             window.scrollTo({top: 0, behavior: 'smooth'});
-        },
-        async registerPush() {
-            try {
-                if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-                
-                const registration = await navigator.serviceWorker.ready;
-                const permission = await Notification.requestPermission();
-                
-                if (permission !== 'granted') return;
-
-                const vapidPublicKey = this.$page.props.vapid_public_key;
-                if (!vapidPublicKey) return;
-
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey)
-                });
-
-                await axios.post(route('notifications.subscribe'), subscription);
-                console.log('PWA: Push subscription successful');
-            } catch (e) {
-                console.error('PWA: Push subscription failed', e);
-            }
-        },
-        urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
         }
     }
 }
