@@ -1,8 +1,28 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 
-// Внедрение манифеста Vite (кеширование ассетов)
+// Кеширование ассетов (CSS, JS, изображения)
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Явный fetch handler для NavigationRoute — ОБЯЗАТЕЛЕН для WebAPK на Android
+registerRoute(
+    ({ request }) => request.mode === 'navigate',
+    new NetworkFirst({
+        cacheName: 'pages-cache',
+        networkTimeoutSeconds: 3,
+    })
+);
+
+// Кеширование статических файлов
+registerRoute(
+    ({ request }) => ['style', 'script', 'worker'].includes(request.destination),
+    new CacheFirst({
+        cacheName: 'static-resources',
+    })
+);
+
+// Push Notifications
 self.addEventListener('push', function (event) {
     if (!(self.Notification && self.Notification.permission === 'granted')) {
         return;
@@ -18,7 +38,8 @@ self.addEventListener('push', function (event) {
             icon: data.icon || '/pwa-icon.png',
             badge: '/pwa-icon.png',
             data: data.data || {},
-            actions: data.actions || []
+            actions: data.actions || [],
+            vibrate: [200, 100, 200],
         };
 
         event.waitUntil(self.registration.showNotification(title, options));
@@ -27,7 +48,7 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    const urlToOpen = event.notification.data.url || '/admin/leads';
+    const urlToOpen = event.notification.data.url || '/';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
