@@ -25,7 +25,11 @@
                     <!-- Background Glow -->
                     <div 
                         class="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-[45px] opacity-10 transition-colors"
-                        :class="[Number(user.role) === 1 ? 'bg-purple-500' : Number(user.role) === 2 ? 'bg-indigo-500' : 'bg-slate-500']"
+                        :class="[
+                            Number(user.role) === 3 ? 'bg-amber-400' : 
+                            Number(user.role) === 2 ? 'bg-indigo-500' : 
+                            Number(user.role) === 1 ? 'bg-purple-500' : 'bg-slate-500'
+                        ]"
                     ></div>
 
                     <div class="flex items-start justify-between mb-8">
@@ -40,14 +44,16 @@
                             <span 
                                 :class="[
                                     'px-4 py-1.5 text-[10px] font-black rounded-full border shadow-sm uppercase tracking-widest',
-                                    Number(user.role) === 1 
-                                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 shadow-purple-500/10' 
+                                    Number(user.role) === 3 
+                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                                         : Number(user.role) === 2 
-                                        ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
+                                        ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                                        : Number(user.role) === 1 
+                                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' 
                                         : 'bg-slate-600/10 text-slate-400 border-slate-600/30'
                                 ]"
                             >
-                                {{ Number(user.role) === 1 ? 'Админ' : Number(user.role) === 2 ? 'Менеджер' : 'Пользователь' }}
+                                {{ Number(user.role) === 3 ? 'Kasper' : Number(user.role) === 2 ? 'Админ' : Number(user.role) === 1 ? 'Менеджер' : 'Сотрудник' }}
                             </span>
                             <span v-if="user.is_blocked" class="bg-rose-500/20 text-rose-500 border border-rose-500/40 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
                                 Banned
@@ -69,7 +75,7 @@
                     </div>
 
                     <!-- Bottom Actions -->
-                    <div class="pt-6 border-t border-white/5 flex items-center gap-3">
+                    <div v-if="Number(user.role) !== 3" class="pt-6 border-t border-white/5 flex items-center gap-3">
                         <button 
                             @click="toggleRole(user)"
                             class="flex-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white py-3.5 px-2 rounded-2xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group/btn"
@@ -100,6 +106,9 @@
                         >
                             🗑️
                         </button>
+                    </div>
+                    <div v-else class="pt-10 text-center">
+                        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white/5 px-6 py-2 rounded-full border border-white/5">System Protected Owner</span>
                     </div>
 
                 </div>

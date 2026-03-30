@@ -7,7 +7,8 @@ const showingNavigationDropdown = ref(false);
 const pushPermission = ref(null);
 
 const user = computed(() => page.props.auth?.user);
-const isKasper = computed(() => user.value?.role === 3);
+const isAdmin = computed(() => Number(user.value?.role) >= 2);
+const isKasper = computed(() => Number(user.value?.role) === 3);
 
 // Используем localStorage, чтобы ID синхронизировался МЕЖДУ вкладками
 const lastLeadId = ref(localStorage.getItem('last_lead_id') ? parseInt(localStorage.getItem('last_lead_id')) : null);
@@ -124,11 +125,16 @@ onUnmounted(() => {
 });
 
 const navigation = computed(() => {
-    return [
+    const nav = [
         { name: 'Заявки', href: '/admin/leads', icon: 'ClipboardDocumentListIcon' },
-        { name: 'Сотрудники', href: '/admin/users', icon: 'UserGroupIcon' },
-        { name: 'Рассылка', href: '/admin/broadcast', icon: 'PaperAirplaneIcon' },
     ];
+
+    if (isAdmin.value) {
+        nav.push({ name: 'Сотрудники', href: '/admin/users', icon: 'UserGroupIcon' });
+        nav.push({ name: 'Рассылка', href: '/admin/broadcast', icon: 'PaperAirplaneIcon' });
+    }
+
+    return nav;
 });
 </script>
 
@@ -163,7 +169,9 @@ const navigation = computed(() => {
                         </div>
                         <div class="overflow-hidden">
                             <div class="font-bold text-sm truncate text-white">{{ user.name }}</div>
-                            <div class="text-[10px] text-indigo-400/80 font-bold uppercase">{{ isKasper ? 'Kasper' : 'Manager' }}</div>
+                            <div class="text-[10px] text-indigo-400/80 font-bold uppercase">
+                                {{ isKasper ? 'Kasper' : (isAdmin ? 'Admin' : 'Manager') }}
+                            </div>
                         </div>
                     </div>
                     <div class="space-y-2">
