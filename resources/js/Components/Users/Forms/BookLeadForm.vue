@@ -386,7 +386,7 @@ onMounted(() => {
                         </svg>
                     </div>
                 </div>
-                <h1 class="lux-title mb-3">Заявка принята! ✅</h1>
+                <h1 class="lux-title mb-3">Заявка принята!</h1>
                 <p class="lux-p opacity-80 mb-5 text-indigo-100">Ваша история уже в надежных руках. <br> Скоро мы свяжемся с вами!</p>
                 
                 <div class="summary-box-lux mx-auto">
@@ -899,14 +899,32 @@ onMounted(() => {
 
 /* Custom Checkmark LUX */
 .checkmark-lux {
-    width: 100px; height: 100px; border-radius: 50%; display: block; stroke-width: 2; stroke: #fff;
-    stroke-miterlimit: 10; margin: 0 auto; box-shadow: inset 0px 0px 0px #60a5fa;
-    animation: fill-lux .4s ease-in-out .4s forwards;
+    width: 50px; height: 50px;
+    display: block;
+    stroke-width: 5;
+    stroke: #fff;
+    stroke-miterlimit: 10;
+    filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+}
+
+.checkmark-wrapper {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 0 30px rgba(96, 165, 250, 0.4), inset 0 0 15px rgba(255,255,255,0.3);
+    animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes scale-up { 
+    0% { transform: scale(0.5); opacity: 0; } 
+    100% { transform: scale(1); opacity: 1; } 
 }
 
 .checkmark__circle-lux {
-    stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 2; stroke-miterlimit: 10;
-    stroke: #60a5fa; fill: none; animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 3; stroke-miterlimit: 10;
+    stroke: rgba(255,255,255,0.4); fill: none; animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
 .checkmark__check-lux {
