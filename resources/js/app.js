@@ -130,28 +130,49 @@ function showInstallOverlay() {
 
     if (isStandalone) return;
 
-    let subtext = 'Нажмите <strong>"Установить"</strong> для работы без браузера';
-    let showManual = !deferredPrompt;
-
-    if (isIOS) {
-        subtext = 'Нажмите кнопку <strong>"Поделиться"</strong> и затем <strong>"На экран Домой"</strong> 📲';
-    } else if (showManual) {
-        subtext = 'Нажмите на три точки (меню) и выберите <strong>"Установить приложение"</strong> или <strong>"На главный экран"</strong>';
-    }
-
     const overlay = document.createElement('div');
     overlay.id = 'pwa-install-overlay';
+    overlay.style = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: flex-end; padding: 24px; font-family: system-ui, -apple-system, sans-serif;';
+    
     overlay.innerHTML = `
-        <div class="pwa-content" style="background: #111827; border: 1px solid #374151; color: white; border-radius: 16px; padding: 15px; position: fixed; bottom: 85px; left: 10px; right: 10px; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; font-family: sans-serif;">
-            <div class="pwa-icon" style="font-size: 24px;">✨</div>
-            <div class="pwa-text" style="flex: 1; display: flex; flex-direction: column; font-size: 14px;">
-                <strong style="margin-bottom: 2px;">BioBook (App)</strong>
-                <span style="opacity: 0.8; font-size: 12px;">${subtext}</span>
+        <div style="background: #111827; width: 100%; border-radius: 28px; padding: 32px 24px; color: white; box-shadow: 0 -10px 50px rgba(0,0,0,0.6); position: relative; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+            <button id="pwa-close-btn" style="position: absolute; top: 20px; right: 20px; background: #374151; border: none; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;">✕</button>
+            
+            <div style="text-align: center; margin-bottom: 28px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);">✨</div>
+                <h3 style="margin: 0 0 10px; font-size: 22px; font-weight: 700;">Установить BioBook</h3>
+                <p style="margin: 0; opacity: 0.8; font-size: 15px; line-height: 1.5; padding: 0 20px;">Лучший опыт работы: мгновенные пуши, работа в фоне и без VPN</p>
             </div>
-            ${(!isIOS && deferredPrompt) ? '<button id="pwa-install-btn" style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">УСТАНОВИТЬ</button>' : ''}
-            <button id="pwa-close-btn" style="background: none; border: none; color: white; opacity: 0.5; font-size: 18px; padding: 5px; cursor: pointer;">✕</button>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                ${isIOS ? `
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                        <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+                            Нажмите <span style="background: #3b82f6; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Поделиться</span><br>
+                            затем <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 6px; font-weight: 600;">На экран Домой</span>
+                        </p>
+                    </div>
+                ` : `
+                    <a href="/downloads/biobook.apk" style="background: #3b82f6; color: white; text-decoration: none; padding: 18px; border-radius: 18px; font-weight: 700; font-size: 16px; text-align: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: transform 0.2s;">
+                        📦 Скачать APK (Рекомендуется)
+                    </a>
+                    
+                    <div style="display: flex; align-items: center; gap: 15px; margin: 5px 0;">
+                        <hr style="flex: 1; opacity: 0.2;"> <span style="font-size: 12px; opacity: 0.5;">ИЛИ</span> <hr style="flex: 1; opacity: 0.2;">
+                    </div>
+
+                    <button id="pwa-install-btn" style="background: transparent; border: 1.5px solid #374151; color: white; padding: 14px; border-radius: 18px; font-weight: 600; font-size: 14px; cursor: pointer;">
+                        Браузерная установка
+                    </button>
+                `}
+            </div>
+            
+            <style>
+                @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            </style>
         </div>
     `;
+    
     document.body.appendChild(overlay);
 
     const installBtn = document.getElementById('pwa-install-btn');
@@ -161,6 +182,10 @@ function showInstallOverlay() {
             const { outcome } = await deferredPrompt.userChoice;
             deferredPrompt = null;
             if (outcome === 'accepted') overlay.remove();
+        };
+    } else if (installBtn) {
+        installBtn.onclick = () => {
+            alert('Для этой установки нажмите три точки в меню браузера и выберите "Добавить на главный экран"');
         };
     }
 
@@ -257,7 +282,36 @@ createInertiaApp({
         window.addEventListener('click', autoSub);
         window.addEventListener('touchstart', autoSub);
 
-        return app
+        // ───── APK Update Checker ────────────────────────────────────────────────────
+
+async function checkApkUpdate() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+
+    if (!isStandalone) return;
+
+    try {
+        const response = await fetch('/version.json?t=' + Date.now());
+        const remote = await response.json();
+        const localVersion = localStorage.getItem('biobook_apk_version') || '1.0.0';
+
+        if (remote.version !== localVersion) {
+            if (confirm(`Доступно обновление приложения (${remote.version}). Скачать новую версию?`)) {
+                localStorage.setItem('biobook_apk_version', remote.version);
+                window.location.href = remote.url;
+            }
+        }
+    } catch (e) {
+        // Silent fail
+    }
+}
+
+// Проверяем обновления при загрузке
+window.addEventListener('load', () => {
+    setTimeout(checkApkUpdate, 5000);
+});
+
+return app
             .use(plugin)
             .use(ZiggyVue)
             .use(VueTheMask)
