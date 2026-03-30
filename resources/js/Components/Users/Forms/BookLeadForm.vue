@@ -415,13 +415,11 @@ onMounted(() => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600;800&display=swap');
-
 .lead-form-wrapper {
     max-width: 860px;
     margin: 0 auto;
     padding: 20px 15px 100px;
-    font-family: 'Outfit', sans-serif;
+    font-family: system-ui, -apple-system, sans-serif;
     color: #fff;
     position: relative;
     z-index: 1;

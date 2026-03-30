@@ -19,7 +19,75 @@ window.onerror = function (msg, url, line) {
     return false;
 };
 
+// ─── FCM-free Notification Polling (работает в России без VPN) ───────────────
+
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+const deviceToken = localStorage.getItem('biobook_device_token') || (() => {
+    const t = generateUUID();
+    localStorage.setItem('biobook_device_token', t);
+    return t;
+})();
+
+// Регистрируем устройство на сервере
+async function registerDevice() {
+    try {
+        await fetch('/api/device/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ token: deviceToken }),
+        });
+        console.log('Device: ✅ Registered token', deviceToken.substring(0, 8) + '...');
+    } catch (e) {
+        console.warn('Device: register failed', e.message);
+    }
+}
+
+// Опрашиваем сервер на предмет новых уведомлений
+async function pollNotifications() {
+    try {
+        const resp = await fetch(`/api/device/poll?token=${deviceToken}`);
+        if (!resp.ok) return;
+        const { notifications } = await resp.json();
+
+        for (const n of notifications) {
+            if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+                const reg = await navigator.serviceWorker.ready;
+                reg.showNotification(n.title, {
+                    body: n.body,
+                    icon: n.icon || '/pwa-icon.png',
+                    badge: '/pwa-icon.png',
+                    data: { url: n.url || '/' },
+                    vibrate: [200, 100, 200],
+                });
+            }
+        }
+
+        if (notifications.length > 0) {
+            console.log(`Device: 🔔 Received ${notifications.length} notification(s)`);
+        }
+    } catch (e) {
+        // Silent fail — не мешаем работе приложения
+    }
+}
+
+// Запускаем после загрузки
+window.addEventListener('load', async () => {
+    await registerDevice();
+    // Первый опрос через 5 секунд, затем каждые 30 секунд
+    setTimeout(async () => {
+        await pollNotifications();
+        setInterval(pollNotifications, 30_000);
+    }, 5000);
+});
+
 // ─── PWA Infrastructure ───────────────────────────────────────────────────────
+
 
 let deferredPrompt = null;
 let swRegistration = null;

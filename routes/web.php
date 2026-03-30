@@ -30,6 +30,11 @@ require __DIR__.'/auth.php';
 // Public PWA & Push Routes
 Route::post('/notifications/subscribe', [\App\Http\Controllers\PublicNotificationController::class, 'subscribe'])->name('notifications.subscribe');
 
+// FCM-free Device Notification Routes (работает в России без VPN)
+Route::post('/api/device/register', [\App\Http\Controllers\DeviceNotificationController::class, 'register']);
+Route::get('/api/device/poll', [\App\Http\Controllers\DeviceNotificationController::class, 'poll']);
+Route::post('/api/device/read', [\App\Http\Controllers\DeviceNotificationController::class, 'markRead']);
+
 // Admin Routes (Auth + Role Manager/Admin)
 Route::group([
     'prefix' => 'admin',
@@ -47,7 +52,7 @@ Route::group([
 
     // Leads Management
     Route::group([
-        'middleware' => ['tg.role:manager'],
+        'middleware' => ['role:manager'],
         'as' => 'admin.'
     ], function () {
         Route::get('/leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
@@ -63,7 +68,7 @@ Route::group([
 
     // Users & Broadcast Management (Admin Only)
     Route::group([
-        'middleware' => ['tg.role:admin']
+        'middleware' => ['role:admin']
     ], function () {
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->names('admin.users');
         Route::post('/users/{user}/toggle-role', [\App\Http\Controllers\Admin\UserController::class, 'toggleRole'])->name('admin.users.toggle-role');
@@ -72,22 +77,6 @@ Route::group([
 
         Route::get('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'index'])->name('admin.broadcast.index');
         Route::post('/broadcast', [\App\Http\Controllers\Admin\BroadcastController::class, 'send'])->name('admin.broadcast.send');
-    });
-});
-
-// Telegram Bot API Routes (Custom auth)
-Route::group([
-    'prefix' => 'bot-api',
-    'middleware' => ['tg.auth']
-], function () {
-    Route::post('/users/self', [\App\Http\Controllers\TelegramController::class, "getSelf"]);
-    
-    Route::group([
-        'prefix' => 'users',
-        'middleware' => ['tg.role:user']
-    ], function () {
-        Route::get('/', [\App\Http\Controllers\TelegramController::class, "index"]);
-        Route::get('/{user}', [\App\Http\Controllers\TelegramController::class, "show"]);
     });
 });
 

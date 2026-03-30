@@ -25,7 +25,7 @@ class CheckRole
     public function handle(Request $request, Closure $next, $role = null)
     {
         // Проверяем авторизацию через web (для админ-панели) или через бот
-        $user = $request->user() ?? $request->botUser ?? null;
+        $user = $request->user();
 
         if (is_null($user)) {
             if ($request->expectsJson()) {

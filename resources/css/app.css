@@ -24,8 +24,8 @@
     --rgba-primary-7: rgba(2, 115, 53, 0.7);
     --rgba-primary-8: rgba(2, 115, 53, 0.8);
     --rgba-primary-9: rgba(2, 115, 53, 0.9);
-    --font-family-base: Lato, sans-serif;
-    --font-family-title: Poppins, sans-serif;
+    --font-family-base: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --font-family-title: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     --border-radius-base: 12px;
     --border-radius-sm: 5px;
     --border-color: #E8EFF3;
@@ -113,7 +113,7 @@
     --bs-font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --bs-font-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --bs-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
-    --bs-body-font-family: "Lato", sans-serif;
+    --bs-body-font-family: system-ui, -apple-system, sans-serif;
     --bs-body-font-size: 0.875rem;
     --bs-body-font-weight: 500;
     --bs-body-line-height: 1.6;

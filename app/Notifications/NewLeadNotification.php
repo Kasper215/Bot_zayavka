@@ -21,24 +21,43 @@ class NewLeadNotification extends Notification
 
     public function via($notifiable)
     {
-        // Вместо стандартного канала, вызываем наш Node.js скрипт-мостик
+        // 1. Всегда пишем в локальную очередь уведомлений для поллинга (надежно в России)
+        $this->sendViaPolling($notifiable);
+        
+        // 2. Дополнительно пробуем через Node/FCM (на случай VPN или если Google ожил)
         $this->sendViaNode($notifiable);
         
-        // Возвращаем пустой массив, чтобы Laravel не пытался отправить через WebPushChannel (он всё равно сломан)
         return [];
+    }
+
+    protected function sendViaPolling($notifiable)
+    {
+        if (!$notifiable instanceof \App\Models\User) return;
+
+        // Находим все устройства этого админа
+        $devices = \App\Models\DeviceToken::where('user_id', $notifiable->id)->get();
+
+        foreach ($devices as $device) {
+            \App\Models\DeviceNotification::create([
+                'device_token_id' => $device->id,
+                'title' => '🚨 НОВАЯ ЗАЯВКА!',
+                'body' => "Клиент: {$this->lead->client_name}\nУслуга: {$this->lead->service_type}",
+                'url' => route('admin.leads.index'),
+                'icon' => '/pwa-icon.png',
+            ]);
+        }
     }
 
     protected function sendViaNode($notifiable)
     {
-        // 1. Собираем подписки пользователя
+        // Собираем подписки пользователя
         $subscriptions = $notifiable->routeNotificationFor('webpush');
         if (!$subscriptions || count($subscriptions) == 0) return;
 
-        // 2. Параметры VAPID из .env
+        // Параметры VAPID
         $publicKey = config('services.vapid.public_key');
         $privateKey = config('services.vapid.private_key');
 
-        // 3. Собираем полезную нагрузку
         $payload = json_encode([
             'title' => '🚨 НОВАЯ ЗАЯВКА!',
             'body' => "Клиент: {$this->lead->client_name}\nУслуга: {$this->lead->service_type}",
@@ -49,11 +68,9 @@ class NewLeadNotification extends Notification
             ]
         ], JSON_UNESCAPED_UNICODE);
 
-        // 4. Отправляем каждую подписку через Node.js через временный конфиг
         $senderPath = base_path('push-sender.cjs');
         
         foreach ($subscriptions as $sub) {
-            // Создаем УНИКАЛЬНЫЙ временный конфиг для этой подписки
             $config = [
                 'vapid_public' => $publicKey,
                 'vapid_private' => $privateKey,
@@ -67,16 +84,12 @@ class NewLeadNotification extends Notification
                 ]
             ];
             
-            $tmpFile = 'push_config_' . uniqid() . '.json';
-            $tmpPath = storage_path($tmpFile);
+            $tmpPath = storage_path('push_config_' . uniqid() . '.json');
             file_put_contents($tmpPath, json_encode($config));
 
-            // Запускаем мост. Указываем полный путь к node, если он в PATH
-            // 6. Выполняем скрипт
             $output = shell_exec("node \"$senderPath\" \"$tmpPath\" 2>&1");
-            \Illuminate\Support\Facades\Log::info("Push Node Execution [" . $sub->endpoint . "]: " . $output);
+            \Illuminate\Support\Facades\Log::info("Push Fallback Output: " . $output);
             
-            // 7. УДАЛЯЕМ временный файл за собой!
             if (file_exists($tmpPath)) unlink($tmpPath);
         }
     }

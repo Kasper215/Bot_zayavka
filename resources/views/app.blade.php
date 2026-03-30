@@ -10,7 +10,6 @@
         @routes
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @inertiaHead
-        <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
         <link rel="apple-touch-icon" href="/pwa-icon.png">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

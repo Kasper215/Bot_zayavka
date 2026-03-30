@@ -10,21 +10,3 @@ import Layout from "@/Layouts/Layout.vue";
         </div>
     </Layout>
 </template>
-<script>
-
-
-export default {
-    data() {
-        return {
-
-        }
-    },
-    computed: {
-        tg() {
-            return window.Telegram?.WebApp || null;
-        },
-    },
-    methods: {}
-
-}
-</script>

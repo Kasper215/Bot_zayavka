@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 
 use App\Models\Lead;
 use Illuminate\Support\Facades\Log;
-use App\Facades\BotMethods;
 
 class PublicLeadController extends Controller
 {

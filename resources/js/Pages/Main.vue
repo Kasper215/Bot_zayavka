@@ -15,45 +15,17 @@ import Layout from "@/Layouts/Layout.vue";
 </template>
 
 <script>
-
-
-
 export default {
     data() {
-        return {
-
-        }
-    },
-
-    computed: {
-        tg() {
-            return window.Telegram?.WebApp || null;
-        },
-
-        tgUser() {
-            if(!this.tg || !this.tg.initData) return null;
-            try {
-                const urlParams = new URLSearchParams(this.tg.initData);
-                return JSON.parse(urlParams.get('user'));
-            } catch (e) {
-                return null;
-            }
-        },
-    },
-    mounted() {
-
-
+        return {}
     },
     methods: {
         open(url) {
-            this.tg.openLink(url)
+            window.open(url, '_blank');
         },
         goTo(name) {
             this.$router.push({name: name})
         },
     }
-
 }
 </script>
-
-

@@ -28,15 +28,11 @@ class User extends Authenticatable
         'phone',
         'username',
         'password',
-        "fio_from_telegram",
-        "telegram_chat_id",
         "role",
         "birthday",
         "city",
         "email_verified_at",
-        "password",
         "blocked_at",
-        "city",
         "blocked_message",
         'created_at',
         'updated_at',
@@ -44,29 +40,19 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
         'remember_token',
-
     ];
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
-
-    public function getUserTelegramLink(): string
-    {
-        return "\n<a href='tg://user?id=" . $this->telegram_chat_id . "'>Перейти к чату с пользователем</a>";
-    }
 
     public function getRoleName(): string
     {
@@ -78,37 +64,6 @@ class User extends Authenticatable
         ];
 
         return $roles[$this->role] ?? 'Неизвестная роль';
-    }
-
-    public function toTelegramText(): string
-    {
-        $age = null;
-        if (!is_null($this->birthday ?? null)) {
-            $age = Carbon::parse($this->birthday)->age;
-        }
-
-        $fields = [
-            '#' => $this->id,
-            'ФИО' => $this->name,
-            'ФИО из Telegram' => $this->fio_from_telegram,
-            'День рождения' => $this->birthday ?? 'не заполнен',
-            'Возраст' => $age ?? 'не заполнен',
-            'Регион' => $this->region ?? 'не заполнен',
-            'Город' => $this->city ?? 'не заполнен',
-            'ID чата Telegram' => $this->telegram_chat_id,
-            'Username' => $this->username,
-            'Создан' => $this->created_at,
-            'Обновлён' => $this->updated_at,
-        ];
-
-        $text = "";
-        foreach ($fields as $label => $value) {
-            if (!empty($value)) {
-                $text .= "{$label}: {$value}\n";
-            }
-        }
-
-        return trim($text);
     }
 
     /**

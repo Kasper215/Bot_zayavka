@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Notifications\GeneralBroadcastNotification;
+use App\Models\DeviceToken;
+use App\Models\DeviceNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Notification;
 
 class BroadcastController extends Controller
 {
@@ -17,12 +17,15 @@ class BroadcastController extends Controller
             abort(403, 'Доступ запрещен');
         }
 
-        // Считаем всех: и пользователей, и гостей-подписчиков
-        $userCount = User::has('pushSubscriptions')->count();
-        $guestCount = \App\Models\GuestSubscriber::has('pushSubscriptions')->count();
-        
+        // Считаем всех подписчиков: WebPush + нативные устройства без FCM
+        $webPushCount = User::has('pushSubscriptions')->count()
+            + \App\Models\GuestSubscriber::has('pushSubscriptions')->count();
+
+        $deviceCount = DeviceToken::whereDate('last_seen_at', '>=', now()->subDays(30))->count();
+
         return Inertia::render('Admin/Broadcast', [
-            'pushSubscribersCount' => $userCount + $guestCount
+            'pushSubscribersCount' => $webPushCount,
+            'deviceSubscribersCount' => $deviceCount,
         ]);
     }
 
@@ -33,33 +36,45 @@ class BroadcastController extends Controller
         }
 
         $request->validate([
-            'title' => 'required|string|max:100',
+            'title'   => 'required|string|max:100',
             'message' => 'required|string|min:5',
-            'url' => 'nullable|url',
+            'url'     => 'nullable|url',
         ]);
 
-        $title = $request->input('title');
+        $title   = $request->input('title');
         $message = $request->input('message');
-        $url = $request->input('url', route('home'));
+        $url     = $request->input('url', route('home'));
 
-        // Находим всех пользователей и гостей с подписками
-        $users = User::has('pushSubscriptions')->get();
+        // ── 1. WebPush (через FCM, работает при наличии подписок) ────────────
+        $users  = User::has('pushSubscriptions')->get();
         $guests = \App\Models\GuestSubscriber::has('pushSubscriptions')->get();
-        
-        $totalCount = $users->count() + $guests->count();
+        $allNotifiables = $users->concat($guests);
 
-        if ($totalCount === 0) {
+        if ($allNotifiables->isNotEmpty()) {
+            \App\Services\PushService::sendBatch($allNotifiables, $title, $message, $url);
+        }
+
+        // ── 2. Наш FCM-free polling (работает в России без VPN) ──────────────
+        $activeDevices = DeviceToken::whereDate('last_seen_at', '>=', now()->subDays(30))->get();
+
+        foreach ($activeDevices as $device) {
+            DeviceNotification::create([
+                'device_token_id' => $device->id,
+                'title'           => $title,
+                'body'            => $message,
+                'url'             => $url,
+                'icon'            => '/pwa-icon.png',
+            ]);
+        }
+
+        $totalWeb    = $allNotifiables->count();
+        $totalDevice = $activeDevices->count();
+        $total       = max($totalWeb, $totalDevice); // не дублировать счёт для одного юзера
+
+        if ($total === 0) {
             return back()->with('error', 'Нет активных подписчиков для рассылки.');
         }
 
-        $notificationUrl = $url ?? route('home');
-
-        // Используем наш новый быстрый сервис для массовой рассылки
-        // Объединяем пользователей и гостей для пакетной отправки
-        $allNotifiables = $users->concat($guests);
-        
-        \App\Services\PushService::sendBatch($allNotifiables, $title, $message, $notificationUrl);
-
-        return back()->with('success', "Рассылка запущена! Уведомления отправляются {$totalCount} пользователям.");
+        return back()->with('success', "Рассылка запущена! WebPush: {$totalWeb}, Native polling: {$totalDevice}.");
     }
 }

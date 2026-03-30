@@ -6,18 +6,14 @@ import axios, {AxiosError} from "axios";
 export interface User {
     id: number
     name: string
-    fio_from_telegram?: string
     email: string
-    telegram_chat_id?: string
     role: number
-    percent: number
-    is_work: boolean
     email_verified_at?: string
     blocked_at?: string
     blocked_message?: string
 }
 
-const path: string = '/bot-api/users'
+const path: string = '/admin/users'
 
 
 export const useUsersStore = defineStore('users', {
@@ -257,44 +253,6 @@ export const useUsersStore = defineStore('users', {
             await makeAxiosFactory(`${path}/${id}`, 'DELETE')
             this.items = this.items.filter(u => u.id !== id)
         },
-        // @ts-ignore
-        async getTelegramLink(id: number) {
-            await makeAxiosFactory(`${path}/${id}/tg`, 'GET')
-        },
-
-
-        // 🔹 Дополнительные экшены
-        async updateRole(id: number, role: number) {
-            const {data} = await makeAxiosFactory(`${path}/${id}/role`, 'POST', {
-                role: role
-            })
-            const idx = this.items.findIndex(u => u.id === id)
-            if (idx !== -1) this.items[idx] = data
-            return data as User
-        },
-
-        async updatePercent(id: number, percent: number) {
-            const {data} = await makeAxiosFactory(`${path}/${id}/percent`, 'PATCH', {percent})
-            const idx = this.items.findIndex(u => u.id === id)
-            if (idx !== -1) this.items[idx] = data
-            return data as User
-        },
-
-        async updateWorkStatus(id: number, is_work: boolean) {
-            const alertStore = useAlertStore()
-
-
-            const {data} = await makeAxiosFactory(`${path}/${id}/work-status`, 'POST', {
-                is_work: is_work
-            })
-
-            alertStore.show("Статус успешно обновлен")
-
-            const idx = this.items.findIndex(u => u.id === id)
-            if (idx !== -1) this.items[idx] = data
-            return data as User
-        },
-
         async block(id: number, blocked_message?: string) {
             const {data} = await makeAxiosFactory(`${path}/${id}/block`, 'PATCH', {blocked_message})
             const idx = this.items.findIndex(u => u.id === id)
