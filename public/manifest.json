@@ -13,20 +13,14 @@
   "icons": [
     {
       "src": "/pwa-icon.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "sizes": "640x640",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
       "src": "/pwa-icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/pwa-icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "sizes": "640x640",
+      "type": "image/jpeg",
       "purpose": "maskable"
     }
   ],
@@ -35,26 +29,26 @@
     {
       "name": "Новая заявка",
       "url": "/?action=new_lead",
-      "icons": [{ "src": "/pwa-icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-icon.png", "sizes": "640x640", "type": "image/jpeg" }]
     },
     {
       "name": "Мои заявки",
       "url": "/leads",
-      "icons": [{ "src": "/pwa-icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-icon.png", "sizes": "640x640", "type": "image/jpeg" }]
     }
   ],
   "screenshots": [
     {
       "src": "/pwa-icon.png",
       "sizes": "640x640",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "wide",
       "label": "BioBook Dashboard"
     },
     {
       "src": "/pwa-icon.png",
       "sizes": "640x640",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "BioBook Mobile"
     }
