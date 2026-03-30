@@ -35,5 +35,21 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/SplashScreen.scale-400.png",
+      "sizes": "1242x2436",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "BioBook Mobile"
+    },
+    {
+      "src": "/Wide310x150Logo.scale-400.png",
+      "sizes": "1240x600",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "BioBook Web"
+    }
   ]
 }
