@@ -63,10 +63,10 @@ function showInstallOverlay() {
     overlay.id = 'pwa-install-overlay';
     overlay.innerHTML = `
         <div class="pwa-content">
-            <div class="pwa-icon">📲</div>
+            <div class="pwa-icon">✨</div>
             <div class="pwa-text">
-                <strong>Установите BioBook</strong>
-                <span>Для быстрого доступа и уведомлений</span>
+                <strong>BioBook PRO</strong>
+                <span>Установите для мгновенных пуш-уведомлений</span>
             </div>
             <button id="pwa-install-btn">УСТАНОВИТЬ</button>
             <button id="pwa-close-btn">✕</button>

@@ -35,8 +35,8 @@ class NewLeadNotification extends Notification
         if (!$subscriptions || count($subscriptions) == 0) return;
 
         // 2. Параметры VAPID из .env
-        $publicKey = env('VAPID_PUBLIC_KEY');
-        $privateKey = env('VAPID_PRIVATE_KEY');
+        $publicKey = config('services.vapid.public_key');
+        $privateKey = config('services.vapid.private_key');
 
         // 3. Собираем полезную нагрузку
         $payload = json_encode([

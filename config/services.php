@@ -38,5 +38,8 @@ return [
     'openrouter' => [
         'api_key' => env('OPENROUTER_API_KEY'),
     ],
-
+    'vapid' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
 ];

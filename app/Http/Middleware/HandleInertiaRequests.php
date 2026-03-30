@@ -35,7 +35,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'has_push' => $request->user() ? $request->user()->pushSubscriptions()->exists() : false,
             ],
-            'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+            'vapid_public_key' => config('services.vapid.public_key'),
             'csrf_token' => csrf_token(),
             'flash' => [
                 'success' => $request->session()->get('success'),

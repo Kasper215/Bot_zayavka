@@ -36,8 +36,8 @@ class GeneralBroadcastNotification extends Notification
         $subscriptions = $notifiable->routeNotificationFor('webpush');
         if (!$subscriptions || count($subscriptions) == 0) return;
 
-        $publicKey = env('VAPID_PUBLIC_KEY');
-        $privateKey = env('VAPID_PRIVATE_KEY');
+        $publicKey = config('services.vapid.public_key');
+        $privateKey = config('services.vapid.private_key');
 
         $payload = json_encode([
             'title' => $this->title,
