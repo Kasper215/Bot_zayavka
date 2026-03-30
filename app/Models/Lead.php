@@ -24,6 +24,10 @@ class Lead extends Model
         'manager_notes',
     ];
 
+    protected $casts = [
+        'files' => 'array',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

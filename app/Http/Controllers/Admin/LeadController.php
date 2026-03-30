@@ -21,15 +21,17 @@ class LeadController extends Controller
         // Фильтрация по поиску
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('contacts', 'like', "%{$search}%")
-                  ->orWhere('service_type', 'like', "%{$search}%")
-                  ->orWhere('client_name', 'like', "%{$search}%")
-                  ->orWhere('volume_stage', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                         ->orWhere('username', 'like', "%{$search}%")
-                         ->orWhere('fio_from_telegram', 'like', "%{$search}%");
+            $likeOperator = config('database.default') === 'pgsql' ? 'ilike' : 'like';
+
+            $query->where(function ($q) use ($search, $likeOperator) {
+                $q->where('contacts', $likeOperator, "%{$search}%")
+                  ->orWhere('service_type', $likeOperator, "%{$search}%")
+                  ->orWhere('client_name', $likeOperator, "%{$search}%")
+                  ->orWhere('volume_stage', $likeOperator, "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search, $likeOperator) {
+                      $uq->where('name', $likeOperator, "%{$search}%")
+                         ->orWhere('username', $likeOperator, "%{$search}%")
+                         ->orWhere('fio_from_telegram', $likeOperator, "%{$search}%");
                   });
             });
         }
@@ -156,12 +158,12 @@ class LeadController extends Controller
             Storage::disk('local')->delete($path);
         }
 
-        $files = json_decode($lead->files, true) ?: [];
+        $files = $lead->files ?: [];
         $files = array_filter($files, function($file) use ($filename) {
             return $file['name'] !== $filename;
         });
 
-        $lead->update(['files' => count($files) > 0 ? json_encode(array_values($files)) : null]);
+        $lead->update(['files' => count($files) > 0 ? array_values($files) : null]);
 
         return back()->with('success', 'Файл удален');
     }

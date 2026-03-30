@@ -20,6 +20,8 @@ class TelegramAdminCheck
      *
      * @param \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response) $next
      */
+        protected $botUser; 
+
     public function handle(Request $request, Closure $next): Response
     {
 
@@ -34,7 +36,7 @@ class TelegramAdminCheck
             $botUser->role = RoleEnum::ADMIN->value;
 
             /** @var \App\Models\User $botUser */
-            $request->botUser = $botUser; // @phpstan-ignore-line
+            $request->attributes->set('botUser', $botUser);
 
             return $next($request);
         }
@@ -71,7 +73,7 @@ class TelegramAdminCheck
 
         if ($this->validateTGData($tgData)) {
             /** @var \App\Models\User $botUser */
-            $request->botUser = $botUser; // @phpstan-ignore-line
+            $$request->attributes->set('botUser', $botUser);
             return $next($request);
         } else {
             return \response()->json(["error" => "some error"], 400);

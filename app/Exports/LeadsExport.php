@@ -26,10 +26,12 @@ class LeadsExport implements FromCollection, WithHeadings, WithMapping
 
         if (!empty($this->filters['search'])) {
             $search = $this->filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('contacts', 'like', "%{$search}%")
-                  ->orWhere('service_type', 'like', "%{$search}%")
-                  ->orWhere('client_name', 'like', "%{$search}%");
+            $likeOperator = config('database.default') === 'pgsql' ? 'ilike' : 'like';
+            
+            $query->where(function ($q) use ($search, $likeOperator) {
+                $q->where('contacts', $likeOperator, "%{$search}%")
+                  ->orWhere('service_type', $likeOperator, "%{$search}%")
+                  ->orWhere('client_name', $likeOperator, "%{$search}%");
             });
         }
 

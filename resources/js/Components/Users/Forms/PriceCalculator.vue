@@ -1,9 +1,6 @@
 <template>
   <div class="calculator-card">
-    <div class="header-container mb-4">
-      <h2 class="section-title">Калькулятор стоимости</h2>
-      <p class="text-muted small">Предварительный расчет вашего проекта</p>
-    </div>
+
 
     <!-- Объем страниц -->
     <div class="calc-section">
