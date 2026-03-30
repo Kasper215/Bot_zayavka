@@ -331,30 +331,43 @@ const resetGenerator = () => {
 /* Mobile Adaptive */
 @media (max-width: 480px) {
   .ai-generator-card {
-    padding: 1rem;
+    padding: 1.25rem 1rem;
+    border-radius: 24px;
   }
   
   .style-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
   
+  .style-btn {
+    padding: 12px 8px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+  
+  .s-name { font-size: 0.8rem; }
+  .s-icon { font-size: 1.1rem; }
+
   .ai-header h3 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
+    line-height: 1.4;
   }
   
   .generated-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
     line-height: 1.6;
   }
   
   .result-text-box {
-    padding: 1.25rem;
+    padding: 1rem;
+    border-radius: 18px;
   }
   
   .ai-apply-btn, .ai-generate-btn {
     padding: 14px;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    border-radius: 14px;
   }
 }
 </style>

@@ -911,11 +911,72 @@ onMounted(() => {
 @keyframes fill-lux { 100% { box-shadow: inset 0px 0px 0px 50px #60a5fa; } }
 
 @media (max-width: 768px) {
-    .biobook-title { font-size: 3.5rem; }
-    .glass-panel { padding: 30px 20px; }
-    .sticky-nav { overflow-x: auto; justify-content: flex-start; padding: 5px; }
-    .scroll-indicators { padding: 4px; }
-    .scroll-indicators button { padding: 8px 15px; }
+    .biobook-title { font-size: 3rem; }
+    .subtitle { font-size: 1rem; }
+    .glass-panel { padding: 25px 15px; border-radius: 24px; }
+    .section-title { font-size: 1.5rem; }
+    .section-number { font-size: 1.5rem; }
+    
+    .sticky-nav { 
+        position: fixed;
+        bottom: 20px;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 95%;
+        margin-bottom: 0;
+        margin-top: 0;
+    }
+    .scroll-indicators { 
+        padding: 4px; 
+        width: 100%;
+        justify-content: space-around;
+        gap: 2px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .scroll-indicators button { padding: 8px 12px; }
+    .scroll-indicators button .nav-text { font-size: 0.65rem; }
+    
+    .genre-card-modern { padding: 20px 10px; border-radius: 20px; }
+    .g-icon { font-size: 2rem; }
+    .genres-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    
+    .summary-card-mini { padding: 15px; flex-direction: column; gap: 10px; text-align: center; }
+    .s-value { font-size: 1.2rem; }
+    .s-label { margin-right: 0; }
+    
+    .lux-title { font-size: 2.2rem; }
+    .summary-box-lux { padding: 20px; }
+    .sb-item { font-size: 0.9rem; gap: 10px; }
+}
+
+@media (max-width: 480px) {
+    .biobook-title { font-size: 2.5rem; }
+    .genres-grid { grid-template-columns: repeat(2, 1fr); }
+    .premium-submit-btn { font-size: 1.1rem; padding: 20px; }
+    .nav-text { display: none !important; }
+    .scroll-indicators button.active .nav-dot { transform: scale(2); }
+}
+
+/* Entry Animations */
+.form-section {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: revealSection 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#section-genre { animation-delay: 0.1s; }
+#section-ai { animation-delay: 0.2s; }
+#section-calc { animation-delay: 0.3s; }
+#section-files { animation-delay: 0.4s; }
+#section-contacts { animation-delay: 0.5s; }
+
+@keyframes revealSection {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hidden-input { display: none; }
@@ -927,6 +988,7 @@ onMounted(() => {
     color: #60a5fa;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.3s;
 }
 
 /* Fix browser default markers */
