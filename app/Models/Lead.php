@@ -19,6 +19,8 @@ class Lead extends Model
         'volume_stage',
         'files',
         'contacts',
+        'extra',
+        'calc_price',
         'status',
         'manager_id',
         'manager_notes',

@@ -152,6 +152,7 @@ export const useUsersStore = defineStore('users', {
 
                 const {data} = await makeAxiosFactory(`/api/public/submit-form`, 'POST', formData)
                 alertStore.show("Ваши данные успешно отправлены!", "success")
+                return data;
 
             } catch (err) {
                 const error = err as AxiosError<{ message?: string }>

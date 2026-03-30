@@ -1,119 +1,168 @@
-<script setup>
-import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
-
-const props = defineProps({
-    users: Array
-});
-
-const roles = {
-    0: { name: 'Пользователь', color: 'text-slate-600 bg-slate-100' },
-    1: { name: 'Администратор', color: 'text-indigo-600 bg-indigo-50' },
-    2: { name: 'Менеджер', color: 'text-emerald-600 bg-emerald-50' }
-};
-
-const editingUser = ref(null);
-const form = useForm({
-    role: ''
-});
-
-const startEdit = (user) => {
-    editingUser.value = user;
-    form.role = user.role;
-};
-
-const saveEdit = () => {
-    form.patch(route('admin.users.update-role', editingUser.value.id), {
-        onSuccess: () => {
-            editingUser.value = null;
-        }
-    });
-};
-</script>
-
 <template>
-    <Head title="Сотрудники" />
+    <Head title="Команда | BioBook Lux" />
 
     <AdminLayout>
-        <template #header>
-            <h1 class="text-2xl font-bold text-slate-900">Управление сотрудниками</h1>
-            <p class="text-sm text-slate-500 mt-1">Здесь вы можете видеть всех менеджеров и менять их роли</p>
-        </template>
-
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50/50 border-b border-slate-200">
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Имя</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Username</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Роль</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Действия</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50/50 transition-colors">
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-semibold text-slate-900">{{ user.name }}</div>
-                            <div class="text-[10px] text-slate-400 mt-0.5">ID: {{ user.id }}</div>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-slate-600">
-                            {{ user.username ? '@' + user.username : '—' }}
-                        </td>
-                        <td class="px-6 py-4">
-                            <span :class="['px-2.5 py-1 rounded-lg text-xs font-bold inline-block', roles[user.role]?.color]">
-                                {{ roles[user.role]?.name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <button 
-                                @click="startEdit(user)"
-                                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                            >
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Header Section -->
+        <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6 animate-fade-in">
+            <div>
+                <h1 class="text-4xl font-black text-white tracking-tight">Команда</h1>
+                <p class="text-slate-400 mt-2 font-medium">Управление ролями и доступом сотрудников</p>
+            </div>
         </div>
 
-        <!-- Backdrop & Modal -->
-        <div v-if="editingUser" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div @click="editingUser = null" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
-            
-            <div class="relative bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
-                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h2 class="text-lg font-bold text-slate-900">Изменение роли: {{ editingUser.name }}</h2>
-                    <button @click="editingUser = null" class="text-slate-400 hover:text-slate-600 p-2">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
+        <!-- Users Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
+            <div 
+                v-for="user in users.data" 
+                :key="user.id" 
+                class="group relative"
+            >
+                <!-- Selection Glow -->
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition duration-500"></div>
                 
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Выберите роль</label>
-                        <select 
-                            v-model="form.role" 
-                            class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all"
-                        >
-                            <option value="0">Пользователь (Обычный)</option>
-                            <option value="2">Менеджер (Только свои заявки)</option>
-                            <option value="1">Администратор (Полный доступ)</option>
-                        </select>
+                <div class="relative bg-[#1E293B]/40 backdrop-blur-xl border border-white/5 hover:border-indigo-500/40 rounded-[2.5rem] p-8 transition-all duration-300 shadow-2xl flex flex-col h-full overflow-hidden shadow-black/20">
+                    
+                    <!-- Background Glow -->
+                    <div 
+                        class="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-[45px] opacity-10 transition-colors"
+                        :class="[Number(user.role) === 1 ? 'bg-purple-500' : Number(user.role) === 2 ? 'bg-indigo-500' : 'bg-slate-500']"
+                    ></div>
+
+                    <div class="flex items-start justify-between mb-8">
+                        <!-- Avatar -->
+                        <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-white/10 flex items-center justify-center text-indigo-400 font-black text-3xl shadow-inner relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                           <div class="absolute inset-0 bg-indigo-500/5 blur-md opacity-50"></div>
+                           <span class="relative">{{ user.name.charAt(0) }}</span>
+                        </div>
+                        
+                        <!-- Role Badge -->
+                        <div class="flex flex-col items-end gap-2">
+                            <span 
+                                :class="[
+                                    'px-4 py-1.5 text-[10px] font-black rounded-full border shadow-sm uppercase tracking-widest',
+                                    Number(user.role) === 1 
+                                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 shadow-purple-500/10' 
+                                        : Number(user.role) === 2 
+                                        ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
+                                        : 'bg-slate-600/10 text-slate-400 border-slate-600/30'
+                                ]"
+                            >
+                                {{ Number(user.role) === 1 ? 'Админ' : Number(user.role) === 2 ? 'Менеджер' : 'Пользователь' }}
+                            </span>
+                            <span v-if="user.is_blocked" class="bg-rose-500/20 text-rose-500 border border-rose-500/40 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                                Banned
+                            </span>
+                        </div>
                     </div>
 
-                    <button 
-                        @click="saveEdit"
-                        :disabled="form.processing"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
-                    >
-                        Сохранить изменения
-                    </button>
+                    <div class="mb-8 flex-1">
+                        <h3 class="text-2xl font-black text-white mb-2 truncate group-hover:text-indigo-400 transition-colors">{{ user.name }}</h3>
+                        <div class="flex items-center gap-2 text-indigo-300/80 font-bold mb-4">
+                            <span class="text-sm">@{{ user.username || 'no_user' }}</span>
+                            <span class="text-slate-700">·</span>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-widest">ID: {{ user.id }}</span>
+                        </div>
+                        <div class="inline-flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                            <div class="w-2 h-2 rounded-full" :class="user.is_blocked ? 'bg-rose-500 shadow-lg shadow-rose-500/30' : 'bg-emerald-500 shadow-lg shadow-emerald-500/30'"></div>
+                            {{ user.is_blocked ? 'Заблокирован' : 'Активен' }}
+                        </div>
+                    </div>
+
+                    <!-- Bottom Actions -->
+                    <div class="pt-6 border-t border-white/5 flex items-center gap-3">
+                        <button 
+                            @click="toggleRole(user)"
+                            class="flex-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white py-3.5 px-2 rounded-2xl border border-white/5 transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group/btn"
+                        >
+                            <span class="opacity-50 group-hover/btn:opacity-100 transition-opacity">🔄</span>
+                            Роль
+                        </button>
+                        
+                        <button 
+                            v-if="!user.is_blocked"
+                            @click="blockUser(user)"
+                            class="flex-1 bg-[#161E2E]/80 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 py-3.5 px-2 rounded-2xl border border-white/5 hover:border-rose-500/40 transition-all text-[10px] font-black uppercase tracking-widest"
+                        >
+                            Блок
+                        </button>
+                        <button 
+                            v-else
+                            @click="unblockUser(user)"
+                            class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white py-3.5 px-2 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest"
+                        >
+                            Разблок
+                        </button>
+
+                        <button 
+                            @click="deleteUser(user)"
+                            class="w-12 h-12 flex items-center justify-center bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-2xl border border-rose-500/20 transition-all shadow-xl"
+                            title="Удалить навсегда"
+                        >
+                            🗑️
+                        </button>
+                    </div>
+
                 </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="users.links.length > 3" class="mt-12 flex justify-center pb-20">
+            <div class="flex p-2 bg-[#1E293B]/60 backdrop-blur-xl border border-white/5 rounded-[2.5rem] gap-1 shadow-2xl">
+                <Link 
+                    v-for="link in users.links" 
+                    :key="link.label"
+                    :href="link.url || '#'"
+                    v-html="link.label"
+                    class="min-w-[48px] h-[48px] flex items-center justify-center rounded-2xl text-sm font-black transition-all"
+                    :class="[
+                        link.active 
+                        ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/30 scale-105' 
+                        : link.url ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-700 pointer-events-none'
+                    ]"
+                />
             </div>
         </div>
     </AdminLayout>
 </template>
+
+<script setup>
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+
+const props = defineProps({
+    users: Object, // Предполгается пагинация
+});
+
+const toggleRole = (user) => {
+    if (confirm(`Изменить роль сотруднику ${user.name}?`)) {
+        router.post(route('admin.users.toggle-role', user.id));
+    }
+};
+
+const blockUser = (user) => {
+    if (confirm(`Вы уверены, что хотите заблокировать ${user.name}? Доступ в админку будет закрыт.`)) {
+        router.post(route('admin.users.block', user.id));
+    }
+};
+
+const unblockUser = (user) => {
+    if (confirm(`Разблокировать ${user.name}?`)) {
+        router.post(route('admin.users.unblock', user.id));
+    }
+};
+
+const deleteUser = (user) => {
+    if (confirm(`УДАЛИТЬ сотрудника ${user.name} из системы? Это действие необратимо.`)) {
+        router.delete(route('admin.users.destroy', user.id));
+    }
+};
+</script>
+
+<style scoped>
+.animate-fade-in { animation: fadeIn 0.8s ease-out; }
+.animate-slide-up { animation: slideUp 0.6s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>

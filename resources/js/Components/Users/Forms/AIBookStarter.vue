@@ -113,7 +113,7 @@ const generateIntro = async () => {
   displayedText.value = '';
   
   try {
-    const { data } = await axios.post('/api/public/ai/generate-intro', {
+    const { data } = await axios.post('/ai/generate-intro', {
         prompt: prompt.value,
         style: selectedStyle.value
     });
@@ -124,7 +124,8 @@ const generateIntro = async () => {
     }
   } catch (error) {
     console.error('AI Generation error:', error);
-    alert('Не удалось сгенерировать текст. Попробуйте еще раз.');
+    const msg = error.response?.data?.message || 'Не удалось сгенерировать текст. Попробуйте еще раз.';
+    alert(msg);
   } finally {
     loading.value = false;
   }

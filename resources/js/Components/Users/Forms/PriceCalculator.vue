@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue';
+import { reactive, computed, watch, onMounted } from 'vue';
 
 const emit = defineEmits(['apply']);
 
@@ -115,6 +115,14 @@ const summary = computed(() => {
     calc_data: `Расчет: ${form.pages} стр, ${form.format}, ${workLabels[form.work_type]}, ${printLabels[form.print]}`,
     calc_price: `от ${formatPrice(totalPrice.value)} до ${formatPrice(totalMaxPrice.value)} ₽`
   };
+});
+
+watch(summary, (newVal) => {
+  emit('apply', newVal);
+}, { deep: true });
+
+onMounted(() => {
+  emit('apply', summary.value);
 });
 
 const apply = () => {

@@ -30,7 +30,7 @@ class AIController extends Controller
         $systemPrompt = $stylePrompts[$request->style] . ' Пиши СТРОГО на русском языке. Кратко, без лишних вступлений и приветствий. Только сам текст начала книги.';
 
         try {
-            $response = Http::withHeaders([
+            $response = Http::withoutVerifying()->withHeaders([
                 'Authorization' => "Bearer {$apiKey}",
                 'HTTP-Referer' => config('app.url'),
                 'X-Title' => 'BioBook App',
@@ -56,8 +56,9 @@ class AIController extends Controller
                 ]);
             }
 
+            $errorMsg = $response->json('error.message') ?? 'Ошибка генерации текста';
             Log::error('OpenRouter Error Status ' . $response->status() . ': ' . $response->body());
-            return response()->json(['message' => 'Ошибка генерации текста'], 500);
+            return response()->json(['message' => $errorMsg], 500);
 
         } catch (\Exception $e) {
             Log::error('AI Generation Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString());

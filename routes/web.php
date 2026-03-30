@@ -92,4 +92,4 @@ Route::group([
 });
 
 // AI Generation Route
-Route::post('/ai/generate', [\App\Http\Controllers\AIController::class, 'generate'])->name('ai.generate');
+Route::post('/ai/generate-intro', [\App\Http\Controllers\AIController::class, 'generateIntro'])->name('ai.generate');

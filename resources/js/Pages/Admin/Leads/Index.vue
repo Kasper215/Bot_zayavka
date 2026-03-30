@@ -1,9 +1,288 @@
+<template>
+    <Head title="Управление заявками | BioBook Lux" />
+
+    <AdminLayout>
+        <!-- Header Section -->
+        <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6 animate-fade-in">
+            <div>
+                <h1 class="text-4xl font-black text-white tracking-tight">Заявки</h1>
+                <p class="text-slate-400 mt-2 font-medium">Контроль и управление всеми обращениями системы</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300"></div>
+                    <div class="relative flex items-center bg-[#1E293B]/60 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden">
+                        <span class="pl-4 text-slate-500">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </span>
+                        <input 
+                            v-model="search"
+                            type="text" 
+                            placeholder="Поиск по имени или контактам..." 
+                            class="bg-transparent border-none text-white text-sm py-3.5 pl-3 pr-10 focus:ring-0 w-full md:w-80 placeholder:text-slate-600 font-medium"
+                        >
+                    </div>
+                </div>
+
+                <select 
+                    v-model="statusFilter"
+                    class="bg-[#1E293B]/60 backdrop-blur-xl border border-white/5 rounded-2xl text-white text-sm py-3.5 px-6 focus:ring-2 focus:ring-indigo-500 transition-all font-bold cursor-pointer outline-none"
+                >
+                    <option value="" class="bg-[#1E293B]">Все статусы</option>
+                    <option value="new" class="bg-[#1E293B]">Новые</option>
+                    <option value="in_progress" class="bg-[#1E293B]">В работе</option>
+                    <option value="rejected" class="bg-[#1E293B]">Отказ</option>
+                    <option value="completed" class="bg-[#1E293B]">Завершены</option>
+                </select>
+
+                <div class="flex items-center gap-2">
+                    <a 
+                        :href="route('admin.leads.export', { search, status: statusFilter })"
+                        class="bg-white/5 hover:bg-white/10 text-white p-3.5 rounded-2xl border border-white/10 transition-all shadow-xl"
+                        title="Экспорт в Excel"
+                    >
+                        📊
+                    </a>
+                    <button 
+                        v-if="Number(userRole) === 1"
+                        @click="clearAllLeads"
+                        class="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white p-3.5 rounded-2xl border border-rose-500/20 transition-all flex items-center justify-center"
+                        title="Очистить всё"
+                    >
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leads Content -->
+        <div class="grid grid-cols-1 gap-4 animate-slide-up">
+            <div 
+                v-for="lead in leads.data" 
+                :key="lead.id" 
+                @click="startEdit(lead)"
+                class="group relative"
+            >
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent rounded-[2rem] opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                
+                <div class="relative flex flex-col lg:flex-row items-start lg:items-center justify-between bg-[#1E293B]/40 backdrop-blur-xl border border-white/5 hover:border-indigo-500/30 rounded-[2rem] p-6 lg:p-8 cursor-pointer transition-all duration-300 shadow-2xl overflow-hidden shadow-black/20">
+                    
+                    <div class="flex items-center gap-6 flex-1 min-w-0">
+                        <!-- Avatar Shield -->
+                        <div class="flex-shrink-0 w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-white/5 flex items-center justify-center text-indigo-400 font-black text-2xl shadow-inner relative">
+                           <div class="absolute inset-2 bg-indigo-500/5 rounded-2xl blur-sm scale-110"></div>
+                           <span class="relative">{{ lead.client_name ? lead.client_name.charAt(0) : '?' }}</span>
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mb-1">
+                                <h3 class="text-xl font-black text-white truncate">{{ lead.client_name || lead.user?.name || 'Н/Д' }}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-white/5 text-slate-400 py-1 px-3 rounded-full font-bold uppercase tracking-widest border border-white/5">#{{ lead.id }}</span>
+                                    <span 
+                                        :class="[
+                                            'px-3 py-1 text-[10px] font-black rounded-full border shadow-sm uppercase tracking-widest',
+                                            statuses[lead.status]?.class || 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                                        ]"
+                                    >
+                                        {{ statuses[lead.status]?.label || lead.status }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-slate-500 text-sm font-medium">
+                                <span class="text-indigo-400/80">@{{ lead.user?.username || 'no_id' }}</span>
+                                <span class="w-1 h-1 bg-slate-700 rounded-full"></span>
+                                <span class="truncate">{{ lead.service_type }}</span>
+                                <span v-if="lead.manager" class="flex items-center gap-1 ml-2 text-emerald-400/80">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                    Отв: {{ lead.manager.name }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 lg:mt-0 lg:ml-10 flex flex-col lg:items-end gap-3 text-right">
+                        <div class="flex flex-col lg:items-end">
+                            <div class="text-white font-bold mb-1 truncate max-w-[300px]">{{ lead.contacts }}</div>
+                            <div class="text-xs text-slate-600 font-bold uppercase tracking-widest">
+                                {{ new Date(lead.created_at).toLocaleDateString() }} · {{ new Date(lead.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Hover Reveal -->
+                    <div class="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity hidden lg:block">
+                        <button class="w-12 h-12 rounded-2xl bg-indigo-500 text-white shadow-xl shadow-indigo-500/20 flex items-center justify-center hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div v-if="leads.data.length === 0" class="py-32 text-center animate-pulse">
+                <div class="text-5xl mb-6 opacity-30">📭</div>
+                <h3 class="text-xl font-bold text-slate-600 uppercase tracking-[0.2em]">Заявок пока нет</h3>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="leads.links.length > 3" class="mt-12 flex justify-center pb-20">
+            <div class="flex p-2 bg-[#1E293B]/60 backdrop-blur-xl border border-white/5 rounded-[2rem] gap-1 shadow-2xl">
+                <Link 
+                    v-for="link in leads.links" 
+                    :key="link.label"
+                    :href="link.url || '#'"
+                    :data="{ search: search, status: statusFilter }"
+                    v-html="link.label"
+                    class="min-w-[44px] h-[44px] flex items-center justify-center rounded-2xl text-sm font-black transition-all"
+                    :class="[
+                        link.active 
+                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+                        : link.url ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-700 pointer-events-none'
+                    ]"
+                />
+            </div>
+        </div>
+
+        <!-- Edit Modal Lux -->
+        <transition name="modal">
+            <div v-if="editingLead" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div @click="editingLead = null" class="absolute inset-0 bg-[#0F172A]/90 backdrop-blur-md"></div>
+                
+                <div class="relative bg-[#1E293B] border border-white/10 rounded-[3rem] w-full max-w-4xl shadow-2xl flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
+                    
+                    <!-- Left Column (Details) -->
+                    <div class="md:w-5/12 p-10 bg-[#161E2E]/50 border-r border-white/5 overflow-y-auto">
+                        <div class="mb-10">
+                            <h2 class="text-3xl font-black text-white mb-2">Заявка #{{ editingLead.id }}</h2>
+                            <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-[0.15em] border border-indigo-500/20">
+                                {{ statuses[editingLead.status]?.label }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-8">
+                            <div class="item">
+                                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-2">Клиент</span>
+                                <div class="text-xl font-black text-white leading-none mb-2">{{ editingLead.client_name || editingLead.user?.name || 'Н/Д' }}</div>
+                                <div class="flex flex-col gap-1">
+                                    <div class="text-indigo-400 font-bold text-sm flex items-center gap-2">
+                                        <span class="opacity-50">📱</span> {{ editingLead.contacts }}
+                                    </div>
+                                    <div v-if="editingLead.user?.username" class="text-slate-500 text-[10px] font-medium flex items-center gap-2">
+                                        <span class="opacity-50 text-[12px]">@</span>{{ editingLead.user?.username }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="item">
+                                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-2">Услуга / Проект</span>
+                                <div class="text-white font-bold mb-1">{{ editingLead.service_type }}</div>
+                                <div class="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                    <p class="text-slate-400 text-xs italic leading-relaxed">{{ editingLead.volume_stage }}</p>
+                                    <div v-if="editingLead.calc_price" class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Оценка:</span>
+                                        <span class="text-emerald-400 font-black text-sm">{{ editingLead.calc_price }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="editingLead.extra" class="item">
+                                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-2">Описание / Идея</span>
+                                <div class="p-4 bg-white/5 border border-white/5 rounded-2xl text-slate-300 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                                    {{ editingLead.extra }}
+                                </div>
+                            </div>
+
+                            <div class="item">
+                                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest block mb-3">Файлы ({{ parseFiles(editingLead.files).length }})</span>
+                                <div class="grid grid-cols-1 gap-2 mt-2">
+                                    <div v-for="(file, idx) in parseFiles(editingLead.files)" :key="idx" class="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-2xl group hover:border-indigo-500/30 transition-all">
+                                        <div class="flex items-center gap-3 overflow-hidden">
+                                            <span class="grayscale group-hover:grayscale-0 transition-opacity">📄</span>
+                                            <div class="flex flex-col truncate">
+                                                <span class="text-xs font-bold text-white truncate">{{ file.name }}</span>
+                                                <span class="text-[9px] text-slate-500">{{ formatSize(file.size) }}</span>
+                                            </div>
+                                        </div>
+                                        <a :href="route('admin.leads.download', { lead: editingLead.id, filename: file.name })" class="p-2 hover:bg-white/10 rounded-xl transition-colors">📥</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Action) -->
+                    <div class="flex-1 p-10 flex flex-col h-full bg-[#1E293B]">
+                        <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Обработка</h3>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Статус работы</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button 
+                                            v-for="(st, key) in statuses" 
+                                            :key="key"
+                                            @click="form.status = key"
+                                            class="py-4 px-3 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-all"
+                                            :class="form.status === key ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/5 border-white/5 text-slate-500 hover:border-white/10'"
+                                        >
+                                            {{ st.label }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Ответственный</label>
+                                    <select v-model="form.manager_id" class="w-full bg-white/5 border border-white/5 rounded-2xl text-white py-4 px-5 focus:ring-2 focus:ring-indigo-500 outline-none font-bold">
+                                        <option value="" class="bg-[#1E293B]">Не назначен</option>
+                                        <option v-for="m in managers" :key="m.id" :value="m.id" class="bg-[#1E293B]">{{ m.name }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Заметки</label>
+                                        <span class="text-[9px] text-slate-600 bg-white/5 px-3 py-1 rounded-full uppercase font-black">Private</span>
+                                    </div>
+                                    <textarea 
+                                        v-model="form.manager_notes" 
+                                        rows="6" 
+                                        placeholder="О чем договорились с клиентом?"
+                                        class="w-full bg-white/5 border border-white/5 rounded-[2rem] text-white py-5 px-6 focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-700 transition-all font-medium resize-none"
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-8 border-t border-white/5 flex gap-4">
+                            <button @click="editingLead = null" class="flex-1 py-4 px-5 text-sm font-black text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest border border-white/5">Отмена</button>
+                            <button 
+                                @click="saveEdit" 
+                                :disabled="form.processing"
+                                class="flex-[1.5] py-4 px-5 text-sm font-black text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl shadow-indigo-500/20 hover:scale-[1.02] transition-all uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ form.processing ? 'Сохранение...' : 'Обновить статус' }}
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </transition>
+    </AdminLayout>
+</template>
+
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
-
-let debounceTimer;
 
 const props = defineProps({
     leads: Object,
@@ -13,31 +292,27 @@ const props = defineProps({
 });
 
 const statuses = {
-    new: { label: 'Новая', class: 'bg-blue-50 text-blue-700 border-blue-100' },
-    in_progress: { label: 'В работе', class: 'bg-amber-50 text-amber-700 border-amber-100' },
-    rejected: { label: 'Отказ', class: 'bg-rose-50 text-rose-700 border-rose-100' },
-    completed: { label: 'Завершена', class: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+    new: { label: 'Новая', class: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
+    in_progress: { label: 'В работе', class: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+    rejected: { label: 'Отказ', class: 'bg-rose-500/10 text-rose-400 border-rose-500/30' },
+    completed: { label: 'Завершена', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
 };
 
 const search = ref(props.filters.search || '');
 const statusFilter = ref(props.filters.status || '');
 
+let debounceTimer;
 const updateFilters = () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         router.get(route('admin.leads.index'), {
             search: search.value,
             status: statusFilter.value
-        }, {
-            preserveState: true,
-            replace: true
-        });
-    }, 300);
+        }, { preserveState: true, replace: true });
+    }, 400);
 };
 
-watch([search, statusFilter], () => {
-    updateFilters();
-});
+watch([search, statusFilter], updateFilters);
 
 const editingLead = ref(null);
 const form = useForm({
@@ -54,7 +329,7 @@ const startEdit = (lead) => {
 };
 
 const saveEdit = () => {
-    form.put(route('admin.leads.update', editingLead.value.id), {
+    form.patch(route('admin.leads.update', editingLead.value.id), {
         onSuccess: () => {
             editingLead.value = null;
         }
@@ -62,12 +337,8 @@ const saveEdit = () => {
 };
 
 const clearAllLeads = () => {
-    if (confirm('Вы уверены, что хотите удалить ВСЕ заявки? Это действие необратимо!')) {
-        router.delete(route('admin.leads.destroy-all'), {
-            onSuccess: () => {
-                alert('Все заявки успешно удалены');
-            }
-        });
+    if (confirm('Удалить ВСЕ заявки безвозвратно?')) {
+        router.delete(route('admin.leads.destroy-all'));
     }
 };
 
@@ -75,9 +346,7 @@ const parseFiles = (files) => {
     if (!files) return [];
     try {
         return typeof files === 'string' ? JSON.parse(files) : files;
-    } catch (e) {
-        return [];
-    }
+    } catch (e) { return []; }
 };
 
 const formatSize = (bytes) => {
@@ -87,359 +356,30 @@ const formatSize = (bytes) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
-
-const deleteFile = (leadId, filename) => {
-    if (confirm(`Удалить файл ${filename}?`)) {
-        router.delete(route('admin.leads.delete-file', { lead: leadId, filename: filename }), {
-            onSuccess: () => {
-                // В Inertia props обновятся сами, но если нужно вручную - можно обновить local state
-                editingLead.value.files = JSON.stringify(parseFiles(editingLead.value.files).filter(f => f.name !== filename));
-            }
-        });
-    }
-};
 </script>
 
-<template>
-    <Head title="Управление заявками" />
-
-    <AdminLayout>
-        <template #header>
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Заявки</h1>
-                    <p class="text-sm text-slate-500 mt-1">Управление всеми обращениями из Telegram бота</p>
-                </div>
-                
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </span>
-                        <input 
-                            v-model="search"
-                            type="text" 
-                            placeholder="Поиск..." 
-                            class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64 transition-all duration-200"
-                        >
-                    </div>
-
-                    <select 
-                        v-model="statusFilter"
-                        class="border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                    >
-                        <option value="">Все статусы</option>
-                        <option value="new">Новые</option>
-                        <option value="in_progress">В работе</option>
-                        <option value="rejected">Отказ</option>
-                        <option value="completed">Завершены</option>
-                    </select>
-
-                    <a 
-                        :href="route('admin.leads.export', { search, status: statusFilter })"
-                        class="px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 rounded-xl border border-indigo-200 transition-all duration-200 flex items-center gap-2"
-                        title="Скачать Excel"
-                    >
-                        📊 Excel
-                    </a>
-                    
-                    <button 
-                        v-if="Number(userRole) === 1"
-                        @click="clearAllLeads"
-                        class="px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all duration-200"
-                        title="Очистить все заявки"
-                    >
-                        🗑️ Очистить всё
-                    </button>
-                </div>
-            </div>
-        </template>
-
-        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200">
-                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Клиент</th>
-                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Услуга / Объем</th>
-                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Контакты</th>
-                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Статус</th>
-                            <th class="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Действие</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <tr v-for="lead in leads.data" :key="lead.id" @click="startEdit(lead)" class="hover:bg-slate-50 transition-colors duration-150 group cursor-pointer">
-                            <td class="px-6 py-5">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-semibold border border-slate-200">
-                                        {{ lead.user?.name ? lead.user.name.charAt(0) : '?' }}
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-slate-900">
-                                            {{ lead.client_name || lead.user?.name || 'Н/Д' }}
-                                        </div>
-                                        <div class="text-xs text-slate-500">
-                                            <span v-if="lead.client_name && lead.user?.name && lead.client_name !== lead.user.name" class="mr-1">
-                                                ({{ lead.user.name }})
-                                            </span>
-                                            @{{ lead.user?.username || 'no_username' }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-5">
-                                <div class="text-sm font-medium text-slate-900 capitalize">{{ lead.service_type }}</div>
-                                <div class="text-xs text-slate-500 mt-0.5 line-clamp-1 max-w-[200px]">{{ lead.volume_stage }}</div>
-                            </td>
-                            <td class="px-6 py-5">
-                                <div class="text-sm text-slate-600">{{ lead.contacts }}</div>
-                                <div class="text-[10px] text-slate-400 mt-1">{{ new Date(lead.created_at).toLocaleString('ru-RU') }}</div>
-                                <div v-if="lead.manager" class="mt-2 flex items-center gap-1.5">
-                                    <div class="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] text-indigo-600 font-bold">M</div>
-                                    <span class="text-[10px] text-slate-500">Отв: {{ lead.manager.name }}</span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-5">
-                                <span 
-                                    :class="[
-                                        'px-2.5 py-1 text-xs font-semibold rounded-lg border',
-                                        statuses[lead.status]?.class || 'bg-slate-100 text-slate-600 border-slate-200'
-                                    ]"
-                                >
-                                    {{ statuses[lead.status]?.label || lead.status }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-5 text-right">
-                                <button 
-                                    @click.stop="startEdit(lead)"
-                                    class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50 transition-all duration-200"
-                                    title="Редактировать"
-                                >
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr v-if="leads.data.length === 0">
-                            <td colspan="5" class="px-6 py-12 text-center text-slate-500 italic">
-                                Заявки не найдены
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Пагинация -->
-            <div v-if="leads.links.length > 3" class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                <div class="text-sm text-slate-500">
-                    Показано <span class="font-medium text-slate-700">{{ leads.from }}</span> - <span class="font-medium text-slate-700">{{ leads.to }}</span> из <span class="font-medium text-slate-700">{{ leads.total }}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <Link 
-                        v-for="link in leads.links" 
-                        :key="link.label"
-                        :href="link.url || '#'"
-                        :data="{ search: search, status: statusFilter }"
-                        :preserve-state="true"
-                        v-html="link.label"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
-                        :class="[
-                            link.active 
-                            ? 'bg-indigo-600 text-white shadow-sm' 
-                            : link.url ? 'text-slate-600 hover:bg-white hover:shadow-sm border border-transparent' : 'text-slate-300 pointer-events-none'
-                        ]"
-                    />
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно -->
-        <div v-if="editingLead" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div @click="editingLead = null" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
-            
-            <div class="relative bg-white rounded-2xl w-full max-w-2xl shadow-2xl transform transition-all my-8 border border-slate-200 flex flex-col max-h-[90vh]">
-                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-900">Заявка #{{ editingLead.id }}</h2>
-                        <div class="text-sm text-slate-500 mt-1 flex flex-col">
-                            <span>
-                                <span class="font-medium text-slate-700">Клиент:</span> 
-                                {{ editingLead.client_name || editingLead.user?.name || 'Без имени' }}
-                                <span v-if="editingLead.client_name && editingLead.user?.name && editingLead.client_name !== editingLead.user.name">
-                                    ({{ editingLead.user.name }})
-                                </span>
-                            </span>
-                            <a 
-                                v-if="editingLead.user?.username" 
-                                :href="'https://t.me/' + editingLead.user.username" 
-                                target="_blank"
-                                class="text-indigo-600 hover:text-indigo-800 hover:underline w-fit"
-                            >
-                                @{{ editingLead.user.username }}
-                            </a>
-                        </div>
-                    </div>
-                    <button @click="editingLead = null" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                
-                <div class="p-6 overflow-y-auto">
-                    <!-- Информация о заявке -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Детали заказа</h3>
-                            <div class="space-y-3">
-                                <div>
-                                    <div class="text-xs text-slate-500 mb-0.5">Услуга</div>
-                                    <div class="font-medium text-slate-900">{{ editingLead.service_type }}</div>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-slate-500 mb-0.5">Объем / Этап</div>
-                                    <div class="font-medium text-slate-900">{{ editingLead.volume_stage }}</div>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-slate-500 mb-0.5">Дата создания</div>
-                                    <div class="font-medium text-slate-900">{{ new Date(editingLead.created_at).toLocaleString('ru-RU') }}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Контактные данные</h3>
-                            <div class="space-y-3">
-                                <div>
-                                    <div class="text-xs text-slate-500 mb-0.5">Контакты из формы</div>
-                                    <div class="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                                        <div class="font-medium text-slate-900 break-words whitespace-pre-wrap">{{ editingLead.contacts }}</div>
-                                    </div>
-                                </div>
-                                <div v-if="editingLead.files" class="mt-4">
-                                    <div class="text-xs text-slate-500 mb-2 uppercase font-bold tracking-tight">Прикрепленные файлы</div>
-                                    <div class="space-y-2">
-                                        <div v-for="(file, idx) in parseFiles(editingLead.files)" :key="idx" class="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg group hover:border-indigo-300 transition-colors">
-                                            <div class="flex items-center gap-2 overflow-hidden">
-                                                <span class="text-lg">📄</span>
-                                                <div class="flex flex-col overflow-hidden">
-                                                    <span class="text-xs font-medium text-slate-900 truncate" :title="file.name">{{ file.name }}</span>
-                                                    <span class="text-[10px] text-slate-400">{{ formatSize(file.size) }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-1.5 ml-2 no-shrink">
-                                                <a 
-                                                    :href="route('admin.leads.download', { lead: editingLead.id, filename: file.name })" 
-                                                    target="_blank"
-                                                    class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200"
-                                                    title="Скачать файл"
-                                                >
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                    </svg>
-                                                </a>
-                                                <button 
-                                                    v-if="Number(userRole) === 1"
-                                                    @click="deleteFile(editingLead.id, file.name)"
-                                                    class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200"
-                                                    title="Удалить файл"
-                                                >
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-t border-slate-100 my-6"></div>
-
-                    <!-- Форма управления -->
-                    <h3 class="text-lg font-bold text-slate-900 mb-4">Управление заявкой</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-5">
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Статус</label>
-                                <select 
-                                    v-model="form.status" 
-                                    class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
-                                >
-                                    <option value="new">Новая</option>
-                                    <option value="in_progress">В работе</option>
-                                    <option value="rejected">Отказ</option>
-                                    <option value="completed">Завершена</option>
-                                </select>
-                            </div>
-
-                            <div v-if="Number(userRole) === 1">
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Менеджер</label>
-                                <select 
-                                    v-model="form.manager_id" 
-                                    class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
-                                >
-                                    <option value="">Не назначен</option>
-                                    <option v-for="manager in managers" :key="manager.id" :value="manager.id">
-                                        {{ manager.name }}
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="text-sm font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                                Заметки менеджера
-                                <span class="text-[10px] text-slate-400 font-normal bg-slate-100 px-2 py-0.5 rounded-full">Внутренние</span>
-                            </label>
-                            <textarea 
-                                v-model="form.manager_notes" 
-                                rows="5" 
-                                placeholder="Комментарии по работе с клиентом..."
-                                class="w-full border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 resize-none"
-                            ></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6 bg-slate-50/80 flex justify-end gap-3 border-t border-slate-100 flex-shrink-0">
-                    <button @click="editingLead = null" class="px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white rounded-xl border border-slate-200 transition-all duration-200">
-                        Закрыть
-                    </button>
-                    <button 
-                        @click="saveEdit" 
-                        :disabled="form.processing" 
-                        class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all duration-200 flex items-center gap-2"
-                    >
-                        <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        {{ form.processing ? 'Сохранение...' : 'Сохранить изменения' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </AdminLayout>
-</template>
-
 <style scoped>
+.animate-fade-in { animation: fadeIn 0.8s ease-out; }
+.animate-slide-up { animation: slideUp 0.6s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-enter-active, .modal-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95) translateY(10px); }
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
+    background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: rgba(255, 255, 255, 0.1);
 }
 </style>
 

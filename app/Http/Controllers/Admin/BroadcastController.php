@@ -4,74 +4,54 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Facades\BotMethods;
+use App\Notifications\GeneralBroadcastNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Telegram\Bot\FileUpload\InputFile;
-use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Support\Facades\Notification;
 
 class BroadcastController extends Controller
 {
     public function index(Request $request)
     {
-        // Только админы могут делать рассылку
         if (!$request->user()->isAdmin()) {
-            abort(403, 'Недостаточно прав для доступа к рассылке');
+            abort(403, 'Доступ запрещен');
         }
 
-        $userCount = User::whereNotNull('telegram_chat_id')->count();
+        // Считаем именно тех, у кого есть активные push-подписки
+        $userCount = User::has('pushSubscriptions')->count();
+        
         return Inertia::render('Admin/Broadcast', [
-            'userCount' => $userCount
+            'pushSubscribersCount' => $userCount
         ]);
     }
 
     public function send(Request $request)
     {
-        // Только админы могут делать рассылку
         if (!$request->user()->isAdmin()) {
-            abort(403, 'Недостаточно прав для выполнения рассылки');
+            abort(403, 'Доступ запрещен');
         }
+
         $request->validate([
+            'title' => 'required|string|max:100',
             'message' => 'required|string|min:5',
-            'image' => 'nullable|image|max:10240', // max 10MB
+            'url' => 'nullable|url',
         ]);
 
+        $title = $request->input('title');
         $message = $request->input('message');
-        $imageFile = $request->file('image');
-        $users = User::whereNotNull('telegram_chat_id')->get();
-        
-        $successCount = 0;
-        $failCount = 0;
+        $url = $request->input('url', route('home'));
 
-        $imagePath = null;
-        if ($imageFile) {
-            $imagePath = $imageFile->getRealPath();
+        // Находим всех пользователей с подписками
+        $users = User::has('pushSubscriptions')->get();
+        
+        if ($users->isEmpty()) {
+            return back()->with('error', 'Нет активных подписчиков для рассылки.');
         }
 
         foreach ($users as $user) {
-            try {
-                if ($imagePath) {
-                    BotMethods::bot()->sendPhoto(
-                        $user->telegram_chat_id, 
-                        $message, 
-                        InputFile::create($imagePath, $imageFile->getClientOriginalName())
-                    );
-                } else {
-                    BotMethods::bot()->sendMessage($user->telegram_chat_id, $message);
-                }
-                
-                $successCount++;
-                // Small sleep to avoid Telegram rate limits
-                if ($successCount % 20 === 0) {
-                    usleep(500000); 
-                }
-            } catch (Exception $e) {
-                Log::error("Broadcast failed for user {$user->id}: " . $e->getMessage());
-                $failCount++;
-            }
+            $user->notify(new GeneralBroadcastNotification($title, $message, $url));
         }
 
-        return back()->with('success', "Рассылка завершена. Отправлено: {$successCount}, Ошибок: {$failCount}");
+        return back()->with('success', "Рассылка запущена! Уведомления отправляются {$users->count()} пользователям.");
     }
 }

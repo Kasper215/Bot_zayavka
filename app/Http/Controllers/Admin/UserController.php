@@ -19,26 +19,55 @@ class UserController extends Controller
 
         $users = User::whereIn('role', [1, 2, 3])
             ->orderBy('role', 'desc')
-            ->get(['id', 'name', 'username', 'role', 'created_at']);
+            ->paginate(12);
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $users */
+        $users->map(function($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'role' => $user->role,
+                'created_at' => $user->created_at,
+                'is_blocked' => $user->blocked_at !== null,
+            ];
+        });
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users
         ]);
     }
 
-    public function updateRole(Request $request, User $user)
+    public function toggleRole(Request $request, User $user)
     {
-        if (!$request->user()->isAdmin()) {
-            abort(403);
-        }
+        if (!$request->user()->isAdmin()) abort(403);
+        
+        // Переключаем между Менеджер (1) и Админ (2)
+        $newRole = (int)$user->role === 1 ? 2 : 1;
+        $user->update(['role' => $newRole]);
 
-        $validated = $request->validate([
-            'role' => 'required|integer|in:0,1,2,3'
-        ]);
+        return back()->with('success', 'Роль сотрудника изменена');
+    }
 
-        $user->update(['role' => $validated['role']]);
+    public function block(Request $request, User $user)
+    {
+        if (!$request->user()->isAdmin()) abort(403);
+        $user->update(['blocked_at' => now()]);
+        return back()->with('success', 'Сотрудник заблокирован');
+    }
 
-        return back()->with('success', 'Роль пользователя обновлена');
+    public function unblock(Request $request, User $user)
+    {
+        if (!$request->user()->isAdmin()) abort(403);
+        $user->update(['blocked_at' => null]);
+        return back()->with('success', 'Сотрудник разблокирован');
+    }
+
+    public function destroy(Request $request, User $user)
+    {
+        if (!$request->user()->isAdmin()) abort(403);
+        $user->delete();
+        return back()->with('success', 'Сотрудник удален из системы');
     }
 
     public function subscribeNotifications(Request $request)

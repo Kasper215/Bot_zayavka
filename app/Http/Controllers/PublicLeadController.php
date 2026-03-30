@@ -23,21 +23,15 @@ class PublicLeadController extends Controller
             'files.*' => 'nullable|file|max:10240', // до 10МБ на файл
         ]);
 
-        $extraInfo = !empty($validated['extra']) ? "\nДоп. информация: " . $validated['extra'] : "";
-        $fullContacts = $validated['contacts'] . $extraInfo;
-            // Формируем описание объема/стадии
-            $summaryStage = $validated['volume_stage'];
-            if (!empty($validated['calc_data'])) {
-                $summaryStage = "🧮 {$validated['calc_data']}\n💰 Оценка: {$validated['calc_price']}";
-            }
-
         try {
             // Создаем заявку (Lead)
             $lead = Lead::create([
                 'client_name' => $validated['client_name'],
-                'contacts' => $fullContacts,
+                'contacts' => $validated['contacts'],
+                'extra' => $validated['extra'] ?? null,
+                'calc_price' => $validated['calc_price'] ?? null,
                 'service_type' => $validated['service_type'],
-                'volume_stage' => $summaryStage,
+                'volume_stage' => $validated['volume_stage'] . ($validated['calc_data'] ? " (" . $validated['calc_data'] . ")" : ""),
                 'status' => 'new',
             ]);
 

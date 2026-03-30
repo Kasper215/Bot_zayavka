@@ -13,12 +13,14 @@ const activeSection = ref('section-genre');
 const form = reactive({
     client_name: '',
     service_type: '',
-    volume_stage: '',
+    volume_stage: 'Стандарт (100 стр.)',
     contacts: '',
     extra: '',
-    calc_data: '',
-    calc_price: '',
+    calc_data: '100 стр, A5, Написание с нуля, Только PDF',
+    calc_price: '0 ₽',
 });
+
+const leadId = ref(null);
 
 const selectedFiles = ref([]);
 
@@ -88,13 +90,22 @@ const submitForm = async () => {
         alert('Пожалуйста, укажите Жанр, ваше Имя и Контакты для связи');
         return;
     }
-    const formData = { ...form };
+    
+    // Ensure volume_stage is populated before sending
+    if (!form.volume_stage) {
+        form.volume_stage = form.calc_data || "Параметры не выбраны";
+    }
+
     try {
-        await userStore.uploadAnonymousForm(formData, selectedFiles.value);
+        const response = await userStore.uploadAnonymousForm({ ...form }, selectedFiles.value);
+        if (response && response.lead_id) {
+            form.lead_id = response.lead_id;
+        }
+        
         currentStep.value = 'success';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
-        console.error(e);
+        console.error("Submission error:", e);
     }
 }
 
@@ -370,16 +381,21 @@ onMounted(() => {
                     </svg>
                 </div>
                 <h1 class="lux-title mb-3">Заявка принята!</h1>
-                <p class="lux-p opacity-80">Ваш личный менеджер изучит материалы и свяжется с вами в ближайшее время для уточнения деталей.</p>
+                <p class="lux-p opacity-80 mb-5">Ваш личный менеджер изучит материалы и свяжется с вами в ближайшее время для уточнения деталей.</p>
                 
-                <div class="summary-box-lux mt-4">
+                <div class="summary-box-lux mx-auto">
                     <div class="sb-item">
-                        <span>Проект:</span>
-                        <strong>{{ form.service_type }}</strong>
+                        <span class="sb-label">Услуга:</span>
+                        <span class="sb-value">{{ form.service_type }}</span>
                     </div>
                     <div class="sb-item" v-if="form.calc_price">
-                        <span>Оценка:</span>
-                        <strong>{{ form.calc_price }}</strong>
+                        <span class="sb-label">Предв. оценка:</span>
+                        <span class="sb-value highlight">{{ form.calc_price }}</span>
+                    </div>
+                    <div class="sb-divider"></div>
+                    <div class="sb-item pb-0">
+                        <span class="sb-label">Номер заказа:</span>
+                        <span class="sb-value fw-bold">#{{ form.lead_id || '...' }}</span>
                     </div>
                 </div>
 
@@ -816,17 +832,50 @@ onMounted(() => {
 .lux-p { font-size: 1.2rem; }
 
 .summary-box-lux {
-    background: rgba(255,255,255,0.03);
-    border-bottom: 2px solid rgba(96, 165, 250, 0.3);
-    padding: 25px;
-    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 24px;
+    max-width: 480px;
+    text-align: left;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.sb-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.2), transparent);
+    margin: 15px 0;
 }
 
 .sb-item {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
+    align-items: center;
+    margin-bottom: 12px;
     font-size: 1.1rem;
+    gap: 30px;
+}
+
+.sb-item:last-child { margin-bottom: 0; }
+
+.sb-label {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.sb-value {
+    font-weight: 500;
+    color: #fff;
+    text-align: right;
+    line-height: 1.3;
+}
+
+.sb-value.highlight {
+    color: #60a5fa;
+    font-size: 1.2rem;
+    font-weight: 800;
 }
 
 /* Animations and Misc */
@@ -878,6 +927,17 @@ onMounted(() => {
     color: #60a5fa;
     font-weight: 600;
     cursor: pointer;
+}
+
+/* Fix browser default markers */
+summary {
+    list-style: none;
+}
+summary::-webkit-details-marker {
+    display: none;
+}
+summary::marker {
+    content: none;
 }
 
 .summary-card-mini {
