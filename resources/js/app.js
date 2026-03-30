@@ -49,9 +49,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function showInstallOverlay() {
     if (document.getElementById('pwa-install-overlay')) return;
     
-    const permission = 'Notification' in window ? Notification.permission : 'not-supported';
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
     let subtext = 'Установите для мгновенных пуш-уведомлений';
-    if (permission === 'denied') subtext = '🔴 Пожалуйста, разрешите уведомления в настройках';
+    if (isIOS && !isStandalone) {
+        subtext = 'Нажмите <strong>"Поделиться"</strong> и <strong>"На экран Домой"</strong> 📲';
+    }
     
     const overlay = document.createElement('div');
     overlay.id = 'pwa-install-overlay';
@@ -62,22 +66,28 @@ function showInstallOverlay() {
                 <strong>BioBook</strong>
                 <span>${subtext}</span>
             </div>
-            <button id="pwa-install-btn">УСТАНОВИТЬ</button>
+            ${(isIOS && !isStandalone) ? '' : '<button id="pwa-install-btn">УСТАНОВИТЬ</button>'}
             <button id="pwa-close-btn">✕</button>
         </div>
     `;
     document.body.appendChild(overlay);
     
-    document.getElementById('pwa-install-btn').onclick = async () => {
-        // Trigger notification request along with install
-        if (window.pwa) await window.pwa.registerPush();
+    if (document.getElementById('pwa-install-btn')) {
+        document.getElementById('pwa-install-btn').onclick = async () => {
+            // Attempt push registration in background
+            if (window.pwa) window.pwa.registerPush();
 
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') overlay.remove();
-        deferredPrompt = null;
-    };
+            if (!deferredPrompt) {
+                // If no prompt, maybe it's already installed or not supported
+                console.log('PWA: No prompt available');
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') overlay.remove();
+            deferredPrompt = null;
+        };
+    }
     
     document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
 }
