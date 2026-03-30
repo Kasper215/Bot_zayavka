@@ -52,15 +52,13 @@ class BroadcastController extends Controller
             return back()->with('error', 'Нет активных подписчиков для рассылки.');
         }
 
-        $notification = new GeneralBroadcastNotification($title, $message, $url);
+        $notificationUrl = $url ?? route('home');
 
-        foreach ($users as $user) {
-            $user->notify($notification);
-        }
-
-        foreach ($guests as $guest) {
-            $guest->notify($notification);
-        }
+        // Используем наш новый быстрый сервис для массовой рассылки
+        // Объединяем пользователей и гостей для пакетной отправки
+        $allNotifiables = $users->concat($guests);
+        
+        \App\Services\PushService::sendBatch($allNotifiables, $title, $message, $notificationUrl);
 
         return back()->with('success', "Рассылка запущена! Уведомления отправляются {$totalCount} пользователям.");
     }

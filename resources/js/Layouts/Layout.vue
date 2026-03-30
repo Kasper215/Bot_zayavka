@@ -25,6 +25,10 @@ import GlobalConfirmModal from "@/Components/GlobalConfirmModal.vue";
                 <span class="nav-icon">▲</span>
                 <span class="nav-label">Наверх</span>
             </button>
+            <button v-if="showNotificationButton" @click="requestPushPermission" class="nav-item notify-btn">
+                <span class="nav-icon animate-pulse">🔔</span>
+                <span class="nav-label">Включить</span>
+            </button>
             <a href="/admin" class="nav-item admin-link">
                 <span class="nav-icon">🛡️</span>
                 <span class="nav-label">Админ</span>
@@ -113,6 +117,19 @@ html, body {
 .admin-link:hover {
     color: #c084fc;
 }
+
+.notify-btn {
+    color: #fbbf24;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+.animate-pulse {
+    animation: pulse 2s infinite ease-in-out;
+}
 </style>
 
 <script>
@@ -122,12 +139,25 @@ export default {
     data() {
         return {
             userStore: useUsersStore(),
+            showNotificationButton: false
         }
     },
     mounted() {
         this.userStore.fetchPublicSelf();
+        this.checkNotificationStatus();
     },
     methods: {
+        checkNotificationStatus() {
+            if ('Notification' in window) {
+                this.showNotificationButton = Notification.permission === 'default';
+            }
+        },
+        async requestPushPermission() {
+            if (window.pwa) {
+                await window.pwa.registerPush();
+                this.checkNotificationStatus();
+            }
+        },
         scrollTop() {
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
