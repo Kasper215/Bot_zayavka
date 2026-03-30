@@ -26,45 +26,68 @@ window.onerror = function (msg, url, line) {
     return false;
 };
 
-// PWA Registration with enhanced debugging
+// PWA Registration with enhanced debugging and Persistent Overlay
+let deferredPrompt;
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        console.log('PWA: Attempting to register /sw.js...');
         navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(reg => {
-                console.log('PWA: ✅ Registered successfully. Scope:', reg.scope);
-                // Notification status check
-                if ('Notification' in window) {
-                    console.log('PWA: Notification permission status:', Notification.permission);
-                }
-
-                reg.onupdatefound = () => {
-                    const installingWorker = reg.installing;
-                    console.log('PWA: 🔄 Update found, installing...');
-                    installingWorker.onstatechange = () => {
-                        if (installingWorker.state === 'installed') {
-                            if (navigator.serviceWorker.controller) {
-                                console.log('PWA: ✨ New content available! Please refresh.');
-                            } else {
-                                console.log('PWA: 📁 Content cached for offline use.');
-                            }
-                        }
-                    };
+                console.log('PWA: ✅ Registered');
+                // Auto-request for notifications on first interaction
+                const requestPushPrompt = () => {
+                   if ('Notification' in window && Notification.permission === 'default') {
+                       Notification.requestPermission().then(permission => {
+                           console.log('PWA: Notification permission', permission);
+                       });
+                   }
+                   window.removeEventListener('click', requestPushPrompt);
                 };
-            })
-            .catch(error => {
-                console.error('PWA: ❌ Registration failed:', error);
+                window.addEventListener('click', requestPushPrompt);
             });
     });
-} else {
-    console.warn('PWA: Service Workers are not supported in this browser or over HTTP.');
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // This event fires when the browser thinks the app is installable
-    console.log('PWA: 📥 beforeinstallprompt triggered! The app can be installed.');
-    window.deferredPrompt = e;
+    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    e.preventDefault();
+    deferredPrompt = e;
+    console.log('PWA: 📥 Ready to install');
+    showInstallOverlay();
 });
+
+function showInstallOverlay() {
+    if (document.getElementById('pwa-install-overlay')) return;
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'pwa-install-overlay';
+    overlay.innerHTML = `
+        <div class="pwa-content">
+            <div class="pwa-icon">📲</div>
+            <div class="pwa-text">
+                <strong>Установите BioBook</strong>
+                <span>Для быстрого доступа и уведомлений</span>
+            </div>
+            <button id="pwa-install-btn">УСТАНОВИТЬ</button>
+            <button id="pwa-close-btn">✕</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    document.getElementById('pwa-install-btn').onclick = () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('PWA: User accepted');
+                overlay.remove();
+            }
+            deferredPrompt = null;
+        });
+    };
+    
+    document.getElementById('pwa-close-btn').onclick = () => overlay.remove();
+}
 
 window.addEventListener('appinstalled', () => {
     console.log('PWA: 🎉 Application was successfully installed!');
