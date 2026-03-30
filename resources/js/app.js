@@ -60,8 +60,10 @@ async function pollNotifications() {
                 const reg = await navigator.serviceWorker.ready;
                 reg.showNotification(n.title, {
                     body: n.body,
-                    icon: n.icon || '/pwa-icon.png',
-                    badge: '/pwa-icon.png',
+                    icon: n.icon || '/launchericon-512x512.png',
+                    badge: '/launchericon-192x192.png',
+                    tag: n.id || 'biobook-notification',
+                    renotify: true,
                     data: { url: n.url || '/' },
                     vibrate: [200, 100, 200],
                 });

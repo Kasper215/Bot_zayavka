@@ -43,8 +43,10 @@ self.addEventListener('push', function (event) {
         const title = data.title || 'Новое уведомление';
         const options = {
             body: data.body || '',
-            icon: data.icon || '/pwa-icon.png',
-            badge: '/pwa-icon.png',
+            icon: data.icon || '/launchericon-512x512.png',
+            badge: '/launchericon-192x192.png',
+            tag: data.id || 'biobook-notification',
+            renotify: true,
             data: data.data || {},
             actions: data.actions || [],
             vibrate: [200, 100, 200],
