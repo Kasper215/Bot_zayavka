@@ -64,6 +64,10 @@ Route::group([
         Route::patch('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'update'])->name('leads.update');
         Route::delete('/leads/{lead}', [\App\Http\Controllers\Admin\LeadController::class, 'destroy'])->name('leads.destroy');
         Route::delete('/leads/all/destroy', [\App\Http\Controllers\Admin\LeadController::class, 'destroyAll'])->name('leads.destroy-all');
+
+        Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
+        Route::patch('/payments/{payment}/status', [\App\Http\Controllers\Admin\PaymentController::class, 'updateStatus'])->name('payments.update-status');
+        Route::post('/payments/settings', [\App\Http\Controllers\Admin\PaymentController::class, 'saveSettings'])->name('payments.save-settings');
     });
 
     // Users & Broadcast Management (Admin Only)

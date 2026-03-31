@@ -49,17 +49,24 @@ class PublicLeadController extends Controller
                 $lead->update(['files' => json_encode($uploadedFiles)]);
             }
 
-            try {
-                // --- ОТПРАВКА ПУШ-УВЕДОМЛЕНИЙ ---
-                // Рассылаем всем Менеджерам (1), Админам (2) и Kasper (3)
-                $staff = \App\Models\User::whereIn('role', [1, 2, 3])->get();
-                Log::info("Notifying staff: " . $staff->count() . " members found.");
-                \Illuminate\Support\Facades\Notification::send($staff, new \App\Notifications\NewLeadNotification($lead));
-                // ---------------------------------
+            $priceStr = $validated['calc_price'] ?? '';
+            $leftPart = explode('до', $priceStr)[0];
+            $numericPrice = (float) preg_replace('/[^0-9]/', '', $leftPart);
 
-            } catch (\Exception $e) {
-                // Игнорируем ошибку уведомлений
-                Log::error("Notification Error: " . $e->getMessage());
+            if ($numericPrice > 0) {
+                 $lead->update(['status' => 'pending_payment']);
+            } else {
+                try {
+                    // --- ОТПРАВКА ПУШ-УВЕДОМЛЕНИЙ ---
+                    // Рассылаем всем Менеджерам (1), Админам (2) и Kasper (3)
+                    $staff = \App\Models\User::whereIn('role', [1, 2, 3])->get();
+                    Log::info("Notifying staff: " . $staff->count() . " members found.");
+                    \Illuminate\Support\Facades\Notification::send($staff, new \App\Notifications\NewLeadNotification($lead));
+                    // ---------------------------------
+                } catch (\Exception $e) {
+                    // Игнорируем ошибку уведомлений
+                    Log::error("Notification Error: " . $e->getMessage());
+                }
             }
 
             return response()->json([

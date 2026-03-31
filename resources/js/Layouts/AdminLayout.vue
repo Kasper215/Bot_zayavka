@@ -127,6 +127,7 @@ onUnmounted(() => {
 const navigation = computed(() => {
     const nav = [
         { name: 'Заявки', href: '/admin/leads', icon: 'ClipboardDocumentListIcon' },
+        { name: 'Оплаты', href: '/admin/payments', icon: 'CreditCardIcon' },
     ];
 
     if (isAdmin.value) {

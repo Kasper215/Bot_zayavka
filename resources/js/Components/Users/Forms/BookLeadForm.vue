@@ -21,8 +21,66 @@ const form = reactive({
 });
 
 const leadId = ref(null);
-
 const selectedFiles = ref([]);
+const payment_method = ref('card');
+const payment_screenshot = ref(null);
+const payment_screenshot_preview = ref(null);
+
+const handlePaymentScreenshot = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        payment_screenshot.value = file;
+        payment_screenshot_preview.value = URL.createObjectURL(file);
+    }
+};
+
+const prepaymentAmount = computed(() => {
+    const leftPart = form.calc_price.split('до')[0];
+    const numericPrice = parseFloat(leftPart.replace(/[^0-9]/g, ''));
+    if (isNaN(numericPrice) || numericPrice === 0) return '0 ₽';
+    return (numericPrice * 0.5).toLocaleString('ru-RU') + ' ₽';
+});
+
+const payment_id = ref(null);
+const payment_status = ref('pending');
+let statusInterval = null;
+
+const submitPayment = async () => {
+    if (!payment_screenshot.value) {
+        alert('Пожалуйста, прикрепите скриншот оплаты');
+        return;
+    }
+    try {
+        const response = await userStore.submitPayment({
+            lead_id: form.lead_id,
+            method: payment_method.value,
+            screenshot: payment_screenshot.value
+        });
+        if (response && response.status === 'ok') {
+            payment_id.value = response.payment_id;
+            currentStep.value = 'success';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            statusInterval = setInterval(checkPaymentStatus, 5000);
+        }
+    } catch (e) {
+        console.error("Payment error:", e);
+    }
+};
+
+const checkPaymentStatus = async () => {
+    if (!payment_id.value) return;
+    try {
+        const res = await fetch(`/api/public/payments/${payment_id.value}/status`);
+        if (res.ok) {
+            const data = await res.json();
+            payment_status.value = data.status;
+            if (data.status !== 'pending') {
+                clearInterval(statusInterval);
+            }
+        }
+    } catch(e) {}
+};
 
 const genres = [
     { id: 'memoirs', name: 'Мемуары / Биография', icon: '📜', color: '#60a5fa' },
@@ -102,7 +160,11 @@ const submitForm = async () => {
             form.lead_id = response.lead_id;
         }
         
-        currentStep.value = 'success';
+        if (form.calc_price && form.calc_price !== '0 ₽') {
+            currentStep.value = 'payment';
+        } else {
+            currentStep.value = 'success';
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
         console.error("Submission error:", e);
@@ -110,8 +172,13 @@ const submitForm = async () => {
 }
 
 const resetToStart = () => {
+    if (statusInterval) clearInterval(statusInterval);
     Object.keys(form).forEach(key => form[key] = '');
     selectedFiles.value = [];
+    payment_screenshot.value = null;
+    payment_screenshot_preview.value = null;
+    payment_id.value = null;
+    payment_status.value = 'pending';
     currentStep.value = 'form';
 };
 
@@ -123,7 +190,20 @@ const isSectionFilled = (section) => {
     return false;
 };
 
-onMounted(() => {
+const paymentSettings = ref({
+    card_number: '0000 0000 0000 0000',
+    phone_number: '+7 (000) 000-00-00',
+    recipient_name: 'Иван И. (Сбербанк/Тинькофф)'
+});
+
+onMounted(async () => {
+    try {
+        const response = await fetch('/api/public/payment-settings');
+        if (response.ok) {
+            paymentSettings.value = await response.json();
+        }
+    } catch(e) {}
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -369,44 +449,146 @@ onMounted(() => {
                 </section>
             </form>
         </div>
+        <div v-else-if="currentStep === 'payment'" class="payment-screen-lux py-1 md:py-5">
+            <div class="success-content text-center glass-panel p-4 md:p-8 max-w-lg mx-auto overflow-hidden shadow-2xl relative">
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"></div>
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-3">Оплата</h1>
+                <p class="text-sm md:text-base text-indigo-200 opacity-90 mb-6">
+                    Для начала работы необходимо внести предоплату 50% от расчетной стоимости.
+                </p>
+                
+                <div class="payment-amount-box mb-6 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)] transform transition hover:scale-[1.02]">
+                    <span class="block text-indigo-300 text-sm font-medium mb-1 uppercase tracking-wider">Сумма к оплате:</span>
+                    <span class="block text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">{{ prepaymentAmount }}</span>
+                </div>
+
+                <div class="payment-methods mb-6">
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <label class="flex-1 p-4 rounded-2xl border cursor-pointer transition-all duration-300 flex items-center justify-center gap-3 sm:flex-col sm:gap-2"
+                               :class="payment_method === 'card' ? 'bg-indigo-500/20 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-white/5 border-white/10 hover:bg-white/10'">
+                            <input type="radio" v-model="payment_method" value="card" class="hidden">
+                            <span class="text-3xl">💳</span>
+                            <span class="text-white font-semibold">По карте</span>
+                        </label>
+                        <label class="flex-1 p-4 rounded-2xl border cursor-pointer transition-all duration-300 flex items-center justify-center gap-3 sm:flex-col sm:gap-2"
+                               :class="payment_method === 'phone' ? 'bg-indigo-500/20 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-white/5 border-white/10 hover:bg-white/10'">
+                            <input type="radio" v-model="payment_method" value="phone" class="hidden">
+                            <span class="text-3xl">📱</span>
+                            <span class="text-white font-semibold">По номеру</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="payment-details mb-6 text-left">
+                    <transition name="fade" mode="out-in">
+                        <div v-if="payment_method === 'card'" key="card" class="p-4 md:p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                            <span class="block text-slate-400 text-xs uppercase tracking-wider mb-2">Номер карты (Сбербанк):</span>
+                            <strong class="block text-white text-xl md:text-2xl tracking-[2px] md:tracking-[4px] font-mono break-words">{{ paymentSettings.card_number }}</strong>
+                        </div>
+                        <div v-else key="phone" class="p-4 md:p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                            <span class="block text-slate-400 text-xs uppercase tracking-wider mb-2">Номер телефона (СБП):</span>
+                            <strong class="block text-white text-xl md:text-2xl tracking-[1px] md:tracking-[2px] font-mono break-words mb-2">{{ paymentSettings.phone_number }}</strong>
+                            <div class="inline-block px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-sm border border-indigo-500/30">
+                                Владелец: {{ paymentSettings.recipient_name }}
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+
+                <div class="payment-screenshot mb-8">
+                    <label class="block p-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all group"
+                           :class="payment_screenshot ? 'bg-indigo-500/10 border-indigo-500/50' : 'bg-white/5 border-white/20 hover:border-indigo-400 hover:bg-white/10'">
+                        <input type="file" accept="image/*" @change="handlePaymentScreenshot" class="hidden">
+                        <div v-if="!payment_screenshot" class="pointer-events-none flex flex-col items-center">
+                            <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                <span class="text-2xl">📸</span>
+                            </div>
+                            <span class="text-white font-medium mb-1">Загрузить скриншот чека</span>
+                            <span class="text-rose-400 text-xs uppercase tracking-widest font-bold">Обязательное подтверждение</span>
+                        </div>
+                        <div v-else class="text-center relative">
+                            <div class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg transform rotate-12">
+                                <span class="text-white text-sm">✓</span>
+                            </div>
+                            <img :src="payment_screenshot_preview" alt="Скриншот" class="max-h-[150px] mx-auto rounded-xl object-contain shadow-lg border border-white/10">
+                            <div class="mt-3 text-sm text-indigo-300 truncate max-w-[200px] mx-auto opacity-70">{{ payment_screenshot.name }}</div>
+                            <div class="mt-2 text-xs text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4">Выбрать другой чек</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="submit-action-area">
+                    <button @click="submitPayment" class="w-full relative px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-lg shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:shadow-[0_10px_40px_rgba(99,102,241,0.6)] hover:-translate-y-1 transition-all overflow-hidden" :disabled="userStore.loading">
+                        <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-shine"></div>
+                        <span v-if="userStore.loading" class="flex items-center justify-center gap-2">
+                            <svg class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ОТПРАВЛЯЕМ...
+                        </span>
+                        <span v-else class="tracking-wide">ПОДТВЕРДИТЬ ОПЛАТУ ✅</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- Success Screen -->
-        <div v-else class="success-screen-lux py-1">
-            <div class="success-content text-center glass-panel p-5 overflow-hidden">
+        <div v-else-if="currentStep === 'success'" class="success-screen-lux py-1 md:py-5">
+            <div class="success-content text-center glass-panel p-5 md:p-10 max-w-lg mx-auto overflow-hidden relative shadow-2xl">
                 <!-- Celebration Particles -->
-                <div class="confetti-container">
+                <div class="confetti-container absolute inset-0 pointer-events-none">
                     <div v-for="i in 20" :key="i" class="confetti-piece" :style="`--d: ${i*18}deg; --delay: ${i*0.1}s; --color: ${i % 2 === 0 ? '#60a5fa' : '#a855f7'}`"></div>
                 </div>
 
-                <div class="success-animation-lux mb-4">
-                    <div class="checkmark-wrapper">
-                        <svg class="checkmark-lux" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                            <circle class="checkmark__circle-lux" cx="26" cy="26" r="25" fill="none"/>
-                            <path class="checkmark__check-lux" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                        </svg>
+                <div class="success-animation-lux mb-6">
+                    <div class="checkmark-wrapper w-24 h-24 mx-auto bg-green-500/10 rounded-full flex items-center justify-center border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                        <span class="text-5xl">🎉</span>
                     </div>
                 </div>
-                <h1 class="lux-title mb-3">Заявка принята!</h1>
-                <p class="lux-p opacity-80 mb-5 text-indigo-100">Ваша история уже в надежных руках. <br> Скоро мы свяжемся с вами!</p>
                 
-                <div class="summary-box-lux mx-auto">
-                    <div class="sb-item">
-                        <span class="sb-label">Жанр:</span>
-                        <span class="sb-value text-indigo-400 fw-bold">{{ form.service_type }}</span>
+                <h1 class="text-3xl md:text-4xl font-black text-white mb-4">Заявка принята!</h1>
+                <p class="text-indigo-200 mb-6 text-sm md:text-base leading-relaxed">
+                    Ваша история уже в надежных руках.<br> 
+                    <span v-if="payment_id" class="text-white/70 text-sm mt-3 inline-block">Ожидайте подтверждения оплаты администратором.</span>
+                    <span v-else>Скоро мы свяжемся с вами!</span>
+                </p>
+                
+                <!-- Status polling UI element -->
+                <div v-if="payment_id" class="mb-8 p-4 rounded-2xl border transition-all duration-500"
+                     :class="payment_status === 'approved' ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 
+                             payment_status === 'rejected' ? 'bg-rose-500/10 border-rose-500/30' : 
+                             'bg-indigo-500/10 border-indigo-500/30'">
+                     
+                    <div v-if="payment_status === 'pending'" class="flex items-center gap-3 justify-center text-indigo-300 text-sm md:text-base">
+                        <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <strong>Статус:</strong> Оплата проверяется...
                     </div>
-                    <div class="sb-item" v-if="form.calc_price">
-                        <span class="sb-label">Расчетная стоимость:</span>
-                        <span class="sb-value highlight aura">{{ form.calc_price }}</span>
+                    <div v-else-if="payment_status === 'approved'" class="text-emerald-400 font-bold text-lg flex items-center justify-center gap-2">
+                        <span class="text-2xl">✅</span> Успешно оплачено!
                     </div>
-                    <div class="sb-divider"></div>
-                    <div class="sb-item pb-0">
-                        <span class="sb-label">ID Заявки:</span>
-                        <span class="sb-value fw-bold text-white/50">#{{ form.lead_id || 'PRO_BOOK' }}</span>
+                    <div v-else-if="payment_status === 'rejected'" class="text-rose-400 font-bold text-lg flex items-center justify-center gap-2">
+                        <span class="text-2xl">❌</span> Оплата отклонена
+                        <p class="text-xs text-white/50 block w-full mt-2 font-normal">Пожалуйста, свяжитесь с поддержкой.</p>
                     </div>
                 </div>
 
-                <button @click="resetToStart" class="lux-back-btn mt-5">
-                    Вернуться к началу 🏠
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6 text-left space-y-3">
+                    <div class="flex justify-between items-center text-sm md:text-base border-b border-white/10 pb-3">
+                        <span class="text-slate-400">Жанр:</span>
+                        <span class="text-indigo-300 font-bold text-right">{{ form.service_type }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm md:text-base border-b border-white/10 pb-3" v-if="form.calc_price">
+                        <span class="text-slate-400">Сумма чека:</span>
+                        <span class="text-white font-bold bg-white/10 px-2 py-1 rounded">{{ prepaymentAmount }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm md:text-base pt-1">
+                        <span class="text-slate-400">ID Заявки:</span>
+                        <span class="text-slate-300 font-mono tracking-wider">#{{ form.lead_id || 'PRO_BOOK' }}</span>
+                    </div>
+                </div>
+
+                <button @click="resetToStart" class="w-full px-5 py-3 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all border border-white/10 text-sm md:text-base font-medium">
+                    Сделать новую заявку 📝
                 </button>
             </div>
         </div>

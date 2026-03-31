@@ -129,7 +129,7 @@ export const useUsersStore = defineStore('users', {
                 throw e
             }
         },
-        async uploadAnonymousForm(form: object, files: File[] = []): Promise<void> {
+        async uploadAnonymousForm(form: object, files: File[] = []): Promise<any> {
             this.loading = true
             this.error = null
 
@@ -147,12 +147,36 @@ export const useUsersStore = defineStore('users', {
                 });
 
                 const {data} = await makeAxiosFactory(`/api/public/submit-form`, 'POST', formData)
-                alertStore.show("Ваши данные успешно отправлены!", "success")
+                alertStore.show("Ваши данные успешно отправлены. Пройдите к оплате!", "success")
                 return data;
 
             } catch (err) {
                 const error = err as AxiosError<{ message?: string }>
                 this.error = error.response?.data?.message || 'Ошибка при отправке данных'
+                alertStore.show(this.error, "error")
+            } finally {
+                this.loading = false
+            }
+        },
+        async submitPayment(form: { lead_id: number, method: string, screenshot: File }): Promise<any> {
+            this.loading = true
+            this.error = null
+
+            const alertStore = useAlertStore()
+
+            try {
+                const formData = new FormData()
+                formData.append('lead_id', String(form.lead_id))
+                formData.append('method', form.method)
+                formData.append('screenshot', form.screenshot)
+
+                const {data} = await makeAxiosFactory(`/api/public/submit-payment`, 'POST', formData)
+                alertStore.show("Оплата отправлена на проверку!", "success")
+                return data;
+
+            } catch (err) {
+                const error = err as AxiosError<{ message?: string }>
+                this.error = error.response?.data?.message || 'Ошибка при отправке оплаты'
                 alertStore.show(this.error, "error")
             } finally {
                 this.loading = false
