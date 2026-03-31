@@ -86,3 +86,11 @@ Route::group([
 
 // AI Generation Route
 Route::post('/ai/generate-intro', [\App\Http\Controllers\AIController::class, 'generateIntro'])->name('ai.generate');
+
+// Fallback for serving storage files if symlink is missing or broken on server
+Route::get('/storage/{path}', function($path) {
+    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        return response()->file(storage_path("app/public/{$path}"));
+    }
+    abort(404);
+})->where('path', '.*');

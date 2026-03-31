@@ -258,11 +258,14 @@
                         </div>
 
                         <div class="mt-8 pt-8 border-t border-white/5 flex gap-4">
-                            <button @click="editingLead = null" class="flex-1 py-4 px-5 text-sm font-black text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest border border-white/5">Отмена</button>
+                            <button @click="deleteLead(editingLead.id)" class="py-4 px-4 text-sm font-black text-rose-500 hover:text-white bg-rose-500/10 hover:bg-rose-500 rounded-2xl transition-all uppercase tracking-widest border border-rose-500/20" title="Удалить заявку">
+                                🗑️
+                            </button>
+                            <button @click="editingLead = null" class="flex-1 py-4 px-3 md:px-5 text-xs md:text-sm font-black text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-2xl transition-all uppercase tracking-widest border border-white/5">Отмена</button>
                             <button 
                                 @click="saveEdit" 
                                 :disabled="form.processing"
-                                class="flex-[1.5] py-4 px-5 text-sm font-black text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl shadow-indigo-500/20 hover:scale-[1.02] transition-all uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                                class="flex-[1.5] py-4 px-3 md:px-5 text-xs md:text-sm font-black text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl shadow-indigo-500/20 hover:scale-[1.02] transition-all uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 <svg v-if="form.processing" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -339,6 +342,16 @@ const saveEdit = () => {
 const clearAllLeads = () => {
     if (confirm('Удалить ВСЕ заявки безвозвратно?')) {
         router.delete(route('admin.leads.destroy-all'));
+    }
+};
+
+const deleteLead = (id) => {
+    if (confirm('Вы уверены, что хотите удалить эту заявку? Это действие необратимо.')) {
+        router.delete(route('admin.leads.destroy', id), {
+            onSuccess: () => {
+                editingLead.value = null;
+            }
+        });
     }
 };
 
