@@ -31,6 +31,9 @@
                 >
                     <option value="" class="bg-[#1E293B]">Все статусы</option>
                     <option value="new" class="bg-[#1E293B]">Новые</option>
+                    <option value="pending_payment" class="bg-[#1E293B]">Ожидают оплаты</option>
+                    <option value="awaiting_confirmation" class="bg-[#1E293B]">Проверка оплаты</option>
+                    <option value="paid" class="bg-[#1E293B]">Оплачено</option>
                     <option value="in_progress" class="bg-[#1E293B]">В работе</option>
                     <option value="rejected" class="bg-[#1E293B]">Отказ</option>
                     <option value="completed" class="bg-[#1E293B]">Завершены</option>
@@ -296,7 +299,10 @@ const props = defineProps({
 
 const statuses = {
     new: { label: 'Новая', class: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
-    in_progress: { label: 'В работе', class: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+    pending_payment: { label: 'Ожидает оплаты', class: 'bg-slate-500/10 text-slate-400 border-slate-500/30' },
+    awaiting_confirmation: { label: 'Проверка оплаты', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+    paid: { label: 'Оплачено', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+    in_progress: { label: 'В работе', class: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
     rejected: { label: 'Отказ', class: 'bg-rose-500/10 text-rose-400 border-rose-500/30' },
     completed: { label: 'Завершена', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
 };

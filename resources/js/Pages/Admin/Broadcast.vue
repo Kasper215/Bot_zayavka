@@ -9,15 +9,29 @@
                 <p class="text-slate-400 mt-2 font-medium">Мгновенные PWA Push-уведомления для клиентов</p>
             </div>
             
-            <div class="flex items-center gap-4 bg-[#1E293B]/40 backdrop-blur-xl border border-white/5 p-4 rounded-3xl">
-                <div class="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center shadow-inner">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <div class="flex items-center gap-4 bg-[#1E293B]/40 backdrop-blur-xl border border-white/5 p-4 rounded-3xl min-w-[200px]">
+                    <div class="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center shadow-inner">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-xl font-black text-white leading-none">{{ pushSubscribersCount }}</div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">PWA Пуш</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-xl font-black text-white leading-none">{{ pushSubscribersCount }}</div>
-                    <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Подписчиков PWA</div>
+
+                <div class="flex items-center gap-4 bg-[#1E293B]/40 backdrop-blur-xl border border-white/5 p-4 rounded-3xl min-w-[200px]">
+                    <div class="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center shadow-inner">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.35-.99.53-1.41.52-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.24.37-.49 1.02-.74 4.01-1.74 6.69-2.89 8.03-3.45 3.82-1.59 4.61-1.87 5.13-1.88.11 0 .37.03.54.17.14.12.18.28.19.45-.01.07.01.21 0 .33z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-xl font-black text-white leading-none">{{ tgSubscribersCount || 0 }}</div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Telegram Бот</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,6 +167,7 @@ import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     pushSubscribersCount: Number,
+    tgSubscribersCount: Number,
 });
 
 const form = useForm({

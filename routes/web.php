@@ -17,7 +17,13 @@ use Illuminate\Http\Request;
 */
 
 Route::get('/', function () {
-    return \Inertia\Inertia::render('MenuPage');
+    $examples = \App\Models\BookExample::where('is_visible', true)
+        ->orderBy('order_index')
+        ->get();
+        
+    return \Inertia\Inertia::render('MenuPage', [
+        'bookExamples' => $examples
+    ]);
 })->name('home');
 
 Route::post('/leads/submit', [\App\Http\Controllers\PublicLeadController::class, 'submitForm'])
@@ -78,6 +84,12 @@ Route::group([
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
         Route::patch('/payments/{payment}/status', [\App\Http\Controllers\Admin\PaymentController::class, 'updateStatus'])->name('payments.update-status');
         Route::post('/payments/settings', [\App\Http\Controllers\Admin\PaymentController::class, 'saveSettings'])->name('payments.save-settings');
+
+        // Book Examples Management
+        Route::get('/book-examples', [\App\Http\Controllers\Admin\BookExampleController::class, 'index'])->name('book-examples.index');
+        Route::post('/book-examples', [\App\Http\Controllers\Admin\BookExampleController::class, 'store'])->name('book-examples.store');
+        Route::post('/book-examples/{example}', [\App\Http\Controllers\Admin\BookExampleController::class, 'update'])->name('book-examples.update');
+        Route::delete('/book-examples/{example}', [\App\Http\Controllers\Admin\BookExampleController::class, 'destroy'])->name('book-examples.destroy');
     });
 
     // Users & Broadcast Management (Admin Only)

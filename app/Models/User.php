@@ -85,4 +85,31 @@ class User extends Authenticatable
         return (int)$this->role === 3;
     }
 
+    /**
+     * Format user data for Telegram messages
+     */
+    public function toTelegramText(): string
+    {
+        $roleName = $this->getRoleName();
+        return "👤 <b>Клиент:</b> " . ($this->name ?? 'Не указано') . "\n" .
+               "📧 <b>Email:</b> " . ($this->email ?? 'нет') . "\n" .
+               "📱 <b>Телефон:</b> " . ($this->phone ?? 'нет') . "\n" .
+               "🆔 <b>Role:</b> " . $roleName;
+    }
+
+    /**
+     * Get a link to the user's Telegram profile
+     */
+    public function getUserTelegramLink(): string
+    {
+        if ($this->username) {
+            return "🔗 <a href='https://t.me/{$this->username}'>Профиль в Telegram</a>";
+        }
+        
+        if ($this->telegram_chat_id) {
+            return "🆔 TG ID: <code>{$this->telegram_chat_id}</code>";
+        }
+
+        return "🔗 (Профиль не привязан)";
+    }
 }

@@ -51,6 +51,25 @@ class PublicPaymentController extends Controller
                     Log::error("Notification Error: " . $e->getMessage());
                 }
 
+                // --- TG CHANNEL NOTIFICATION ---
+                try {
+                    $adminChannel = env('TELEGRAM_ADMIN_CHANNEL');
+                    if ($adminChannel) {
+                        $methodIcon = $validated['method'] === 'card' ? '💳' : '📱';
+                        $text = "💰 <b>НОВАЯ ОПЛАТА!</b>\n\n" .
+                               "👤 Клиент: {$lead->client_name}\n" .
+                               "📎 Заявка: #{$lead->id} ({$lead->service_type})\n" .
+                               "💵 Сумма (предоплата): " . number_format($paymentAmount, 0, '.', ' ') . " ₽\n" .
+                               "{$methodIcon} Метод: {$validated['method']}\n\n" .
+                               "⚠️ <b>Проверьте скриншот в админ-панели!</b>";
+                        
+                        \App\Facades\BotMethods::bot()->sendMessage($adminChannel, $text);
+                    }
+                } catch (\Exception $e) {
+                    Log::error("TG Payment Notification Error: " . $e->getMessage());
+                }
+                // -------------------------------
+
                 return response()->json([
                     'status' => 'ok',
                     'message' => 'Оплата успешно отправлена на проверку.',

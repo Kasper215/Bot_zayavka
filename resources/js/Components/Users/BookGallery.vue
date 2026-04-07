@@ -1,15 +1,36 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-const books = [
-    {
-        title: 'Лес, где живут чудеса',
-        description: 'История, которая оживает на страницах вашей личной книги.',
-        image: '/images/les s chydesami.png',
-        pdf_file: '/Лес, где живут чудеса.pdf',
-        tag: 'Семейная история'
+const props = defineProps({
+    examples: {
+        type: Array,
+        default: () => []
     }
-];
+});
+
+// Fallback to default if no examples provided from server
+const books = computed(() => {
+    if (props.examples && props.examples.length > 0) {
+        return props.examples.map(ex => ({
+            title: ex.title,
+            description: ex.description,
+            image: ex.cover_path,
+            pdf_file: ex.pdf_path,
+            tag: ex.tag
+        }));
+    }
+    
+    // Default fallback
+    return [
+        {
+            title: 'Лес, где живут чудеса',
+            description: 'История, которая оживает на страницах вашей личной книги.',
+            image: '/images/les s chydesami.png',
+            pdf_file: '/Лес, где живут чудеса.pdf',
+            tag: 'Семейная история'
+        }
+    ];
+});
 
 const openBook = (pdf) => {
     if (pdf) {

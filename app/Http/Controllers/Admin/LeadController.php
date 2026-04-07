@@ -83,7 +83,7 @@ class LeadController extends Controller
         }
         
         $rules = [
-            'status' => 'required|string|in:new,in_progress,rejected,completed',
+            'status' => 'required|string|in:new,in_progress,rejected,completed,pending_payment,awaiting_confirmation,paid',
             'manager_notes' => 'nullable|string',
         ];
 

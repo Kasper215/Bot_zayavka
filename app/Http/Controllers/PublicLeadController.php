@@ -71,6 +71,25 @@ class PublicLeadController extends Controller
                     // Игнорируем ошибку уведомлений
                     Log::error("Notification Error: " . $e->getMessage());
                 }
+
+                // --- TG CHANNEL NOTIFICATION ---
+                try {
+                    $adminChannel = env('TELEGRAM_ADMIN_CHANNEL');
+                    if ($adminChannel) {
+                        $text = "🆕 <b>НОВАЯ ЗАЯВКА!</b>\n\n" .
+                               "👤 Клиент: {$lead->client_name}\n" .
+                               "📞 Контакты: {$lead->contacts}\n" .
+                               "📚 Услуга: {$lead->service_type}\n" .
+                               "📊 Объем: {$lead->volume_stage}\n" .
+                               "💰 Оценка: " . ($lead->calc_price ?? 'N/A') . "\n\n" .
+                               "📝 Заметки: " . ($lead->extra ?? 'нет');
+                        
+                        \App\Facades\BotMethods::bot()->sendMessage($adminChannel, $text);
+                    }
+                } catch (\Exception $e) {
+                    Log::error("TG Lead Notification Error: " . $e->getMessage());
+                }
+                // -------------------------------
             }
 
             return response()->json([

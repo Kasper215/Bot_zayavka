@@ -22,10 +22,12 @@ class BroadcastController extends Controller
             + \App\Models\GuestSubscriber::has('pushSubscriptions')->count();
 
         $deviceCount = DeviceToken::whereDate('last_seen_at', '>=', now()->subDays(30))->count();
+        $tgCount = User::whereNotNull('telegram_chat_id')->count();
 
         return Inertia::render('Admin/Broadcast', [
             'pushSubscribersCount' => $webPushCount,
             'deviceSubscribersCount' => $deviceCount,
+            'tgSubscribersCount' => $tgCount,
         ]);
     }
 
@@ -69,12 +71,29 @@ class BroadcastController extends Controller
 
         $totalWeb    = $allNotifiables->count();
         $totalDevice = $activeDevices->count();
-        $total       = max($totalWeb, $totalDevice); // не дублировать счёт для одного юзера
+        $totalTg     = 0;
 
-        if ($total === 0) {
+        // ── 3. Telegram Bot (для пользователей, привязавших TG или зашедших через него) ──
+        $tgUsers = User::whereNotNull('telegram_chat_id')->get();
+        if ($tgUsers->isNotEmpty()) {
+            foreach ($tgUsers as $tgUser) {
+                try {
+                    $tgTotalText = "📣 <b>{$title}</b>\n\n{$message}";
+                    if ($url) {
+                        $tgTotalText .= "\n\n🔗 <a href='{$url}'>Подробнее</a>";
+                    }
+                    \App\Facades\BotMethods::bot()->sendMessage($tgUser->telegram_chat_id, $tgTotalText);
+                    $totalTg++;
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("TG Broadcast Error for user #{$tgUser->id}: " . $e->getMessage());
+                }
+            }
+        }
+
+        if ($totalWeb === 0 && $totalDevice === 0 && $totalTg === 0) {
             return back()->with('error', 'Нет активных подписчиков для рассылки.');
         }
 
-        return back()->with('success', "Рассылка запущена! WebPush: {$totalWeb}, Native polling: {$totalDevice}.");
+        return back()->with('success', "Рассылка запущена! WebPush: {$totalWeb}, Polling: {$totalDevice}, TG: {$totalTg}.");
     }
 }
