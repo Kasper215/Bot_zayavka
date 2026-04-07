@@ -146,7 +146,11 @@ export const useUsersStore = defineStore('users', {
                     formData.append(`files[${index}]`, file);
                 });
 
-                const {data} = await makeAxiosFactory(`/api/public/submit-form`, 'POST', formData)
+                const {data} = await axios.post(`/leads/submit`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
                 alertStore.show("Ваши данные успешно отправлены. Пройдите к оплате!", "success")
                 return data;
 

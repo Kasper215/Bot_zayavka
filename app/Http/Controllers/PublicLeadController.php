@@ -25,6 +25,7 @@ class PublicLeadController extends Controller
         try {
             // Создаем заявку (Lead)
             $lead = Lead::create([
+                'user_id' => auth()->id(),
                 'client_name' => $validated['client_name'],
                 'contacts' => $validated['contacts'],
                 'extra' => $validated['extra'] ?? null,
@@ -39,9 +40,12 @@ class PublicLeadController extends Controller
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $file) {
                     $originalName = $file->getClientOriginalName();
-                    $path = $file->storeAs("leads/{$lead->id}", $originalName, 'local');
+                    // Sanitizing filename: timestamp + random string + original extension
+                    $safeName = time() . '_' . \Illuminate\Support\Str::random(10) . '.' . $file->getClientOriginalExtension();
+                    $path = $file->storeAs("leads/{$lead->id}", $safeName, 'local');
                     $uploadedFiles[] = [
                         'name' => $originalName,
+                        'safe_name' => $safeName,
                         'path' => $path,
                         'size' => $file->getSize()
                     ];

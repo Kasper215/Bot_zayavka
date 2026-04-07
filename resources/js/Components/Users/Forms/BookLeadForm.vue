@@ -1,9 +1,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { Link } from "@inertiajs/vue3";
 import { useUsersStore } from "@/stores/users";
 import BookQuiz from "@/Components/Users/Forms/BookQuiz.vue";
 import PriceCalculator from "@/Components/Users/Forms/PriceCalculator.vue";
 import AIBookStarter from "@/Components/Users/Forms/AIBookStarter.vue";
+import BookGallery from "@/Components/Users/BookGallery.vue";
 
 const userStore = useUsersStore();
 const currentStep = ref('form'); // 'form' or 'success'
@@ -163,6 +165,12 @@ const submitForm = async () => {
         if (form.calc_price && form.calc_price !== '0 ₽') {
             currentStep.value = 'payment';
         } else {
+            // Если мы уже вошли - сразу перекидываем в ЛК через 2 секунды
+            if (userStore.self) {
+                 setTimeout(() => {
+                     window.location.href = '/account';
+                 }, 1500);
+            }
             currentStep.value = 'success';
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -223,6 +231,17 @@ onMounted(async () => {
     <transition name="fade" mode="out-in">
         <div v-if="currentStep === 'form'" class="main-form-container">
             
+            <!-- Auth Suggestion CTA -->
+            <div v-if="!userStore.self" class="auth-suggestion mb-8 glass-panel text-center p-6">
+                <div class="suggestion-icon mb-3">👤</div>
+                <h4 class="text-white font-bold text-lg mb-1">Хотите отслеживать статус вашей книги?</h4>
+                <p class="text-indigo-200 text-sm mb-4">Войдите или зарегистрируйтесь, чтобы иметь доступ к личному кабинету с вашими заказами.</p>
+                <div class="flex gap-4 justify-center">
+                    <Link :href="route('login')" class="auth-btn login-btn">Войти</Link>
+                    <Link :href="route('register')" class="auth-btn reg-btn">Регистрация</Link>
+                </div>
+            </div>
+
             <div class="background-glows">
                 <div class="glow glow-1"></div>
                 <div class="glow glow-2"></div>
@@ -236,6 +255,8 @@ onMounted(async () => {
                     <div class="header-divider"></div>
                 </div>
             </header>
+
+            <BookGallery />
 
             <!-- Sticky Nav -->
             <nav class="sticky-nav">
@@ -483,7 +504,7 @@ onMounted(async () => {
                     <transition name="fade" mode="out-in">
                         <div v-if="payment_method === 'card'" key="card" class="p-4 md:p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-                            <span class="block text-slate-400 text-xs uppercase tracking-wider mb-2">Номер карты (Сбербанк):</span>
+                            <span class="block text-slate-400 text-xs uppercase tracking-wider mb-2">Номер карты:</span>
                             <strong class="block text-white text-xl md:text-2xl tracking-[2px] md:tracking-[4px] font-mono break-words">{{ paymentSettings.card_number }}</strong>
                         </div>
                         <div v-else key="phone" class="p-4 md:p-5 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
@@ -597,10 +618,51 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.auth-suggestion {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(30, 41, 59, 0.4) !important;
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+}
+
+.suggestion-icon {
+    font-size: 2.5rem;
+}
+
+.auth-btn {
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.login-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.reg-btn {
+    background: #6366f1;
+    color: #fff;
+}
+
+.reg-btn:hover {
+    background: #4f46e5;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
 .lead-form-wrapper {
     max-width: 860px;
     margin: 0 auto;
-    padding: 20px 15px 100px;
+    padding: 60px 15px 100px;
     font-family: system-ui, -apple-system, sans-serif;
     color: #fff;
     position: relative;

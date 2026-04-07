@@ -41,8 +41,8 @@ class LeadController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        // Если это менеджер (роль 2), показываем закрепленные за ним ИЛИ новые (незакрепленные) заявки
-        if ($user->role == 2) {
+        // Если это менеджер (роль 1), показываем закрепленные за ним ИЛИ новые (незакрепленные) заявки
+        if ($user->role == 1) {
             $query->where(function($q) use ($user) {
                 $q->where('manager_id', $user->id)
                   ->orWhereNull('manager_id');
@@ -58,8 +58,8 @@ class LeadController extends Controller
 
         // Список менеджеров для назначения (админы и менеджеры)
         $managers = [];
-        if ($user->role == 1) {
-            $managers = \App\Models\User::whereIn('role', [1, 2])->get(['id', 'name']);
+        if ($user->role >= 2) {
+            $managers = \App\Models\User::whereIn('role', [1, 2, 3])->get(['id', 'name']);
         }
 
         return Inertia::render('Admin/Leads/Index', [
@@ -76,14 +76,19 @@ class LeadController extends Controller
     public function update(Request $request, Lead $lead)
     {
         $user = $request->user();
+
+        // Security: Manager (Role 1) can only edit their own leads or unassigned leads
+        if ($user->role == 1 && $lead->manager_id && $lead->manager_id !== $user->id) {
+            abort(403, 'Это не ваша заявка');
+        }
         
         $rules = [
             'status' => 'required|string|in:new,in_progress,rejected,completed',
             'manager_notes' => 'nullable|string',
         ];
 
-        // Только админы могут назначать менеджеров
-        if ($user->role == 1) {
+        // Только админы (>=2) могут назначать менеджеров
+        if ($user->role >= 2) {
             $rules['manager_id'] = 'nullable|exists:users,id';
         }
 
@@ -91,14 +96,30 @@ class LeadController extends Controller
 
         $lead->update($validated);
 
-        return back()->with('success', 'Заявка обновлена');
+        // Notify the user about general status change
+        if ($lead->user) {
+            $statusLabels = [
+                'new' => 'Новая',
+                'in_progress' => 'В работе',
+                'completed' => 'Завершена',
+                'rejected' => 'Отклонена'
+            ];
+            try {
+                $lead->user->notify(new \App\Notifications\LeadStatusNotification($lead, $statusLabels[$validated['status']] ?? $validated['status']));
+            } catch (\Exception $e) {}
+        }
     }
 
     /**
      * Remove the specified lead.
      */
-    public function destroy(Lead $lead)
+    public function destroy(Request $request, Lead $lead)
     {
+        $user = $request->user();
+        if ($user->role == 1 && $lead->manager_id && $lead->manager_id !== $user->id) {
+            abort(403, 'Это не ваша заявка');
+        }
+
         $lead->delete();
 
         return back()->with('success', 'Заявка удалена');
@@ -109,8 +130,8 @@ class LeadController extends Controller
      */
     public function destroyAll(Request $request)
     {
-        // Только админы могут удалять все заявки
-        if ($request->user()->role != 1) {
+        // Только админы (>=2) могут удалять все заявки
+        if ($request->user()->role < 2) {
             abort(403, 'Недостаточно прав для выполнения этого действия');
         }
 
@@ -133,8 +154,13 @@ class LeadController extends Controller
     /**
      * Download a file from a lead.
      */
-    public function downloadFile(Lead $lead, $filename)
+    public function downloadFile(Request $request, Lead $lead, $filename)
     {
+        $user = $request->user();
+        if ($user->role == 1 && $lead->manager_id && $lead->manager_id !== $user->id) {
+            abort(403, 'Нет доступа к этому файлу');
+        }
+
         $path = "leads/{$lead->id}/{$filename}";
         
         if (!Storage::disk('local')->exists($path)) {
@@ -150,8 +176,13 @@ class LeadController extends Controller
     /**
      * Delete a file from a lead.
      */
-    public function deleteFile(Lead $lead, $filename)
+    public function deleteFile(Request $request, Lead $lead, $filename)
     {
+        $user = $request->user();
+        if ($user->role == 1 && $lead->manager_id && $lead->manager_id !== $user->id) {
+            abort(403, 'Нет прав для удаления этого файла');
+        }
+
         $path = "leads/{$lead->id}/{$filename}";
         
         if (Storage::disk('local')->exists($path)) {

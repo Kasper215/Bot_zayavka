@@ -28,14 +28,9 @@ class User extends Authenticatable
         'phone',
         'username',
         'password',
-        "role",
         "birthday",
         "city",
         "email_verified_at",
-        "blocked_at",
-        "blocked_message",
-        'created_at',
-        'updated_at',
     ];
 
     /**

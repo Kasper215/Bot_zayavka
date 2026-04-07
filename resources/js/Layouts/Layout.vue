@@ -1,5 +1,5 @@
 <script setup>
-import {Head} from '@inertiajs/vue3'
+import {Head, Link} from '@inertiajs/vue3'
 import GlobalAlert from "@/Components/GlobalAlert.vue";
 import GlobalConfirmModal from "@/Components/GlobalConfirmModal.vue";
 import { onMounted, ref } from 'vue';
@@ -63,7 +63,11 @@ const installPwa = async () => {
                 <span class="nav-icon animate-pulse">🔔</span>
                 <span class="nav-label">Включить</span>
             </button>
-            <a href="/admin" class="nav-item admin-link">
+            <Link :href="userStore.self ? '/account' : '/login'" class="nav-item account-link">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Профиль</span>
+            </Link>
+            <a v-if="userStore.self && userStore.self.role >= 1" href="/admin" class="nav-item admin-link">
                 <span class="nav-icon">🛡️</span>
                 <span class="nav-label">Админ</span>
             </a>
@@ -151,6 +155,14 @@ html, body {
 
 .admin-link:hover {
     color: #c084fc;
+}
+
+.account-link {
+    color: #fff;
+}
+
+.account-link:hover {
+    color: #60a5fa;
 }
 
 .notify-btn {

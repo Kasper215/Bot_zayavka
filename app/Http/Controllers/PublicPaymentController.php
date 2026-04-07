@@ -29,8 +29,8 @@ class PublicPaymentController extends Controller
             // Handle screenshot
             if ($request->hasFile('screenshot')) {
                 $file = $request->file('screenshot');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs("payments/{$lead->id}", $filename, 'public');
+                $safeName = time() . '_' . \Illuminate\Support\Str::random(10) . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs("payments/{$lead->id}", $safeName, 'public');
 
                 $payment = Payment::create([
                     'lead_id' => $lead->id,
@@ -68,10 +68,17 @@ class PublicPaymentController extends Controller
 
     public function paymentStatus($id)
     {
-        $payment = Payment::find($id);
+        $payment = Payment::with('lead')->find($id);
+        
         if (!$payment) {
             return response()->json(['status' => 'not_found'], 404);
         }
+
+        // Security: check if the lead belongs to the current user
+        if ($payment->lead->user_id !== auth()->id()) {
+            abort(403);
+        }
+
         return response()->json(['status' => $payment->status]);
     }
 }

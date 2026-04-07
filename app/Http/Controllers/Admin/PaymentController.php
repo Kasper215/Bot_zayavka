@@ -64,9 +64,24 @@ class PaymentController extends Controller
             'status' => $validated['status'],
         ]);
 
+        $statusLabels = [
+            'approved' => 'Оплачено (В работе)',
+            'rejected' => 'Отклонено (Проверьте детали)',
+            'pending' => 'На проверке'
+        ];
+
         // If approved, update lead status
         if ($validated['status'] === 'approved') {
-            $payment->lead->update(['status' => 'in_progress']); // Or any suitable status
+            $payment->lead->update(['status' => 'paid']); // or 'in_progress'
+        }
+
+        // Notify the user who owns the lead
+        if ($payment->lead->user) {
+            try {
+                $payment->lead->user->notify(new \App\Notifications\LeadStatusNotification($payment->lead, $statusLabels[$validated['status']] ?? $validated['status']));
+            } catch (\Exception $e) {
+                // Ignore notification errors
+            }
         }
 
         return redirect()->back()->with('success', 'Статус оплаты обновлен.');

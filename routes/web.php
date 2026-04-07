@@ -24,6 +24,16 @@ Route::post('/leads/submit', [\App\Http\Controllers\PublicLeadController::class,
     ->name('leads.submit')
     ->middleware('throttle:5,1');
 
+Route::get('/api/public/me', function () {
+    return auth()->user();
+});
+
+// Personal Account Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/account', [\App\Http\Controllers\UserAccountController::class, 'index'])->name('account.index');
+    Route::get('/api/leads/{lead}/status', [\App\Http\Controllers\UserAccountController::class, 'getLeadStatus'])->name('account.lead-status');
+});
+
 // Auth Routes (Login)
 require __DIR__.'/auth.php';
 
